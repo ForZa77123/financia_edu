@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'screens/chart_screen.dart';
 import 'screens/records_screen.dart';
 import 'screens/add_screen.dart';
-import 'screens/reports_screen.dart';
+import 'screens/tips_screen.dart';
 import 'screens/other_screen.dart';
 
 void main() {
@@ -76,7 +76,7 @@ class _HomeScreenState extends State<HomeScreen> {
     const ChartScreen(),
     const RecordsScreen(),
     const AddScreen(),
-    const ReportsScreen(),
+    const TipsScreen(),
     const OtherScreen(),
   ];
 
@@ -92,7 +92,7 @@ class _HomeScreenState extends State<HomeScreen> {
           BottomNavigationBarItem(icon: Icon(Icons.pie_chart), label: 'chart'),
           BottomNavigationBarItem(icon: Icon(Icons.list_alt), label: 'records'),
           BottomNavigationBarItem(icon: Icon(Icons.add_circle_outline), label: 'add'),
-          BottomNavigationBarItem(icon: Icon(Icons.analytics), label: 'reports'),
+          BottomNavigationBarItem(icon: Icon(Icons.lightbulb), label: 'tips'),
           BottomNavigationBarItem(icon: Icon(Icons.more_horiz), label: 'other'),
         ],
       ),
