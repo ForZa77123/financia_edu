@@ -5,6 +5,7 @@ class OtherScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
     return Scaffold(
       body: SafeArea(
         child: SingleChildScrollView(
@@ -13,13 +14,16 @@ class OtherScreen extends StatelessWidget {
               // Profile Section
               Container(
                 padding: const EdgeInsets.all(24),
-                color: Colors.blue[50],
+                decoration: BoxDecoration(
+                  color: colorScheme.primary.withOpacity(0.08),
+                  borderRadius: const BorderRadius.vertical(bottom: Radius.circular(24)),
+                ),
                 child: Row(
                   children: [
-                    const CircleAvatar(
+                    CircleAvatar(
                       radius: 32,
-                      backgroundColor: Colors.blue,
-                      child: Icon(Icons.person, size: 40, color: Colors.white),
+                      backgroundColor: colorScheme.primary,
+                      child: const Icon(Icons.person, size: 40, color: Colors.white),
                     ),
                     const SizedBox(width: 16),
                     Expanded(
@@ -46,7 +50,7 @@ class OtherScreen extends StatelessWidget {
                       onPressed: () {
                         // TODO: Edit profile
                       },
-                      icon: const Icon(Icons.edit),
+                      icon: Icon(Icons.edit, color: colorScheme.primary),
                     ),
                   ],
                 ),
@@ -57,35 +61,35 @@ class OtherScreen extends StatelessWidget {
                 shrinkWrap: true,
                 physics: const NeverScrollableScrollPhysics(),
                 children: [
-                  const ListTile(
-                    leading: Icon(Icons.notifications),
-                    title: Text('Notifications'),
-                    trailing: Icon(Icons.chevron_right),
+                  ListTile(
+                    leading: Icon(Icons.notifications, color: colorScheme.primary),
+                    title: const Text('Notifications'),
+                    trailing: Icon(Icons.chevron_right, color: colorScheme.primary),
                   ),
-                  const ListTile(
-                    leading: Icon(Icons.security),
-                    title: Text('Security'),
-                    trailing: Icon(Icons.chevron_right),
+                  ListTile(
+                    leading: Icon(Icons.security, color: colorScheme.primary),
+                    title: const Text('Security'),
+                    trailing: Icon(Icons.chevron_right, color: colorScheme.primary),
                   ),
-                  const ListTile(
-                    leading: Icon(Icons.language),
-                    title: Text('Language'),
-                    trailing: Icon(Icons.chevron_right),
+                  ListTile(
+                    leading: Icon(Icons.language, color: colorScheme.primary),
+                    title: const Text('Language'),
+                    trailing: Icon(Icons.chevron_right, color: colorScheme.primary),
                   ),
-                  const ListTile(
-                    leading: Icon(Icons.color_lens),
-                    title: Text('Theme'),
-                    trailing: Icon(Icons.chevron_right),
+                  ListTile(
+                    leading: Icon(Icons.color_lens, color: colorScheme.primary),
+                    title: const Text('Theme'),
+                    trailing: Icon(Icons.chevron_right, color: colorScheme.primary),
                   ),
-                  const ListTile(
-                    leading: Icon(Icons.help),
-                    title: Text('Help & Support'),
-                    trailing: Icon(Icons.chevron_right),
+                  ListTile(
+                    leading: Icon(Icons.help, color: colorScheme.primary),
+                    title: const Text('Help & Support'),
+                    trailing: Icon(Icons.chevron_right, color: colorScheme.primary),
                   ),
-                  const ListTile(
-                    leading: Icon(Icons.info),
-                    title: Text('About'),
-                    trailing: Icon(Icons.chevron_right),
+                  ListTile(
+                    leading: Icon(Icons.info, color: colorScheme.primary),
+                    title: const Text('About'),
+                    trailing: Icon(Icons.chevron_right, color: colorScheme.primary),
                   ),
                   const Divider(),
                   ListTile(
@@ -111,7 +115,7 @@ class OtherScreen extends StatelessWidget {
                                 // TODO: Implement logout logic
                                 Navigator.pop(context);
                               },
-                              child: const Text('Logout'),
+                              child: const Text('Logout', style: TextStyle(color: Colors.red)),
                             ),
                           ],
                         ),

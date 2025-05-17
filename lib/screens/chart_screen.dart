@@ -5,6 +5,7 @@ class ChartScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
     return Scaffold(
       body: Column(
         children: [
@@ -12,34 +13,34 @@ class ChartScreen extends StatelessWidget {
           Container(
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
-              color: Colors.grey[100],
+              color: colorScheme.primary.withOpacity(0.07),
             ),
             child: SafeArea(
               child: Column(
                 children: [
-                  const Row(
+                  Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       Text(
                         'expenses',
-                        style: TextStyle(fontSize: 16),
+                        style: TextStyle(fontSize: 16, color: colorScheme.primary),
                       ),
                       Text(
                         'income',
-                        style: TextStyle(fontSize: 16),
+                        style: TextStyle(fontSize: 16, color: colorScheme.secondary),
                       ),
                     ],
                   ),
-                  const Row(
+                  Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       Text(
                         'Rp -',
-                        style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                        style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: colorScheme.primary),
                       ),
                       Text(
                         'Rp -',
-                        style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                        style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: colorScheme.secondary),
                       ),
                     ],
                   ),
@@ -51,7 +52,7 @@ class ChartScreen extends StatelessWidget {
                     child: const Center(
                       child: Text(
                         'Agustus 2024',
-                        style: TextStyle(fontSize: 16),
+                        style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
                       ),
                     ),
                   ),
@@ -73,10 +74,21 @@ class ChartScreen extends StatelessWidget {
                       margin: const EdgeInsets.symmetric(vertical: 16),
                       decoration: BoxDecoration(
                         shape: BoxShape.circle,
-                        border: Border.all(color: Colors.grey[300]!),
+                        gradient: SweepGradient(
+                          colors: [
+                            colorScheme.primary,
+                            colorScheme.secondary,
+                            colorScheme.primary.withOpacity(0.2),
+                          ],
+                          stops: const [0.7, 0.85, 1.0],
+                        ),
+                        border: Border.all(color: colorScheme.primary.withOpacity(0.2)),
                       ),
-                      child: const Center(
-                        child: Text('85%', style: TextStyle(fontSize: 24)),
+                      child: Center(
+                        child: Text(
+                          '85%',
+                          style: TextStyle(fontSize: 32, fontWeight: FontWeight.bold, color: colorScheme.primary),
+                        ),
                       ),
                     ),
                   ),
@@ -84,20 +96,25 @@ class ChartScreen extends StatelessWidget {
                   // Expense breakdown list
                   Container(
                     decoration: BoxDecoration(
-                      border: Border.all(color: Colors.grey[300]!),
+                      border: Border.all(color: colorScheme.primary.withOpacity(0.1)),
                       borderRadius: BorderRadius.circular(8),
+                      color: Colors.white,
                     ),
                     child: ListTile(
                       leading: Container(
-                        width: 24,
-                        height: 24,
-                        color: Colors.blue[100],
+                        width: 32,
+                        height: 32,
+                        decoration: BoxDecoration(
+                          color: colorScheme.secondary.withOpacity(0.2),
+                          shape: BoxShape.circle,
+                        ),
+                        child: const Icon(Icons.restaurant, color: Color(0xFF1976D2)),
                       ),
-                      title: const Row(
+                      title: Row(
                         children: [
-                          Text('food 85%'),
-                          Spacer(),
-                          Text('Rp 85.000'),
+                          Text('food 85%', style: TextStyle(color: colorScheme.primary)),
+                          const Spacer(),
+                          Text('Rp 85.000', style: TextStyle(fontWeight: FontWeight.bold)),
                         ],
                       ),
                     ),
@@ -111,11 +128,11 @@ class ChartScreen extends StatelessWidget {
                       3,
                       (index) => Container(
                         margin: const EdgeInsets.symmetric(horizontal: 4),
-                        width: 8,
-                        height: 8,
+                        width: 10,
+                        height: 10,
                         decoration: BoxDecoration(
                           shape: BoxShape.circle,
-                          color: index == 0 ? Colors.blue : Colors.grey[300],
+                          color: index == 0 ? colorScheme.primary : colorScheme.primary.withOpacity(0.2),
                         ),
                       ),
                     ),

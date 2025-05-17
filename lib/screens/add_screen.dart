@@ -21,11 +21,12 @@ class _AddScreenState extends State<AddScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
     return Scaffold(
       appBar: AppBar(
         leading: TextButton(
           onPressed: () => Navigator.pop(context),
-          child: const Text('cancel'),
+          child: const Text('cancel', style: TextStyle(color: Colors.white)),
         ),
         title: const Text('ADD'),
         actions: [
@@ -48,8 +49,9 @@ class _AddScreenState extends State<AddScreen> {
                   child: ElevatedButton(
                     onPressed: () => setState(() => isExpense = true),
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: isExpense ? Colors.blue : Colors.grey[300],
-                      foregroundColor: isExpense ? Colors.white : Colors.black,
+                      backgroundColor: isExpense ? colorScheme.primary : colorScheme.primary.withOpacity(0.08),
+                      foregroundColor: isExpense ? Colors.white : colorScheme.primary,
+                      elevation: 0,
                     ),
                     child: const Text('EXPENSE'),
                   ),
@@ -59,8 +61,9 @@ class _AddScreenState extends State<AddScreen> {
                   child: ElevatedButton(
                     onPressed: () => setState(() => isExpense = false),
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: !isExpense ? Colors.blue : Colors.grey[300],
-                      foregroundColor: !isExpense ? Colors.white : Colors.black,
+                      backgroundColor: !isExpense ? colorScheme.secondary : colorScheme.secondary.withOpacity(0.08),
+                      foregroundColor: !isExpense ? Colors.white : colorScheme.secondary,
+                      elevation: 0,
                     ),
                     child: const Text('INCOME'),
                   ),
@@ -91,19 +94,25 @@ class _AddScreenState extends State<AddScreen> {
                         padding: const EdgeInsets.all(12),
                         decoration: BoxDecoration(
                           shape: BoxShape.circle,
-                          color: isSelected ? Colors.blue[100] : Colors.grey[300],
+                          color: isSelected
+                              ? colorScheme.primary.withOpacity(0.15)
+                              : colorScheme.primary.withOpacity(0.05),
+                          border: isSelected
+                              ? Border.all(color: colorScheme.primary, width: 2)
+                              : null,
                         ),
                         child: Icon(
                           category['icon'],
-                          color: isSelected ? Colors.blue : Colors.grey[600],
+                          color: isSelected ? colorScheme.primary : Colors.grey[600],
                         ),
                       ),
                       const SizedBox(height: 4),
                       Text(
                         category['name'],
                         style: TextStyle(
-                          color: isSelected ? Colors.blue : Colors.grey[600],
+                          color: isSelected ? colorScheme.primary : Colors.grey[600],
                           fontSize: 12,
+                          fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
                         ),
                       ),
                     ],
