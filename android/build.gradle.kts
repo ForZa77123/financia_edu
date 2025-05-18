@@ -1,3 +1,18 @@
+// buildscript {
+
+//     repositories {
+     
+//       google() 
+//       mavenCentral() 
+//     }
+
+//     dependencies {
+
+//       // Add the Maven coordinates and latest version of the plugin
+//       classpath ("com.google.gms.google-services:4.4.2")
+//     }
+// }
+
 allprojects {
     repositories {
         google()

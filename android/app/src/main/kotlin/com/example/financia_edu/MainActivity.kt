@@ -1,5 +1,7 @@
-package com.example.financia_edu
+package com.tubespam.finansiaedu
 
 import io.flutter.embedding.android.FlutterActivity
 
-class MainActivity : FlutterActivity()
+class MainActivity : FlutterActivity() {
+
+}
