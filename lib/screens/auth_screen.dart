@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:device_info_plus/device_info_plus.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 class AuthScreen extends StatefulWidget {
   final void Function(String username) onLogin;
@@ -108,6 +109,15 @@ class _AuthScreenState extends State<AuthScreen> {
             );
         final user = userCredential.user;
         if (user != null && !user.emailVerified) {
+          await FirebaseFirestore.instance
+              .collection('users')
+              .doc(user.uid)
+              .set({
+                'email': user.email,
+                'createdAt': FieldValue.serverTimestamp(),
+                // Add other fields as needed
+              });
+
           await user.sendEmailVerification();
           setState(() {
             error =
@@ -123,9 +133,6 @@ class _AuthScreenState extends State<AuthScreen> {
       }
     } on FirebaseAuthException catch (e) {
       String customError;
-      print(
-        'FirebaseAuthException code: ${e.code}',
-      ); // Debug: see the code in console
       if (e.code == 'invalid-credential') {
         customError = "Email atau password salah.";
       } else if (e.code == 'invalid-email') {
