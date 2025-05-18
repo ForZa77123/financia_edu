@@ -377,8 +377,9 @@ class _OtherScreenState extends State<OtherScreen> {
                                 TextButton(
                                   onPressed: () {
                                     Navigator.pop(context);
-                                    if (widget.onLogout != null)
+                                    if (widget.onLogout != null) {
                                       widget.onLogout!();
+                                    }
                                   },
                                   child: const Text(
                                     'Logout',
