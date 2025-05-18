@@ -298,139 +298,177 @@ class _TipsScreenState extends State<TipsScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return SingleChildScrollView(
-      child: Padding(
-        padding: const EdgeInsets.only(bottom: 24),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const SizedBox(height: 32),
-            // Tips Harian Carousel
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16.0),
-              child: SizedBox(
-                height: 120,
-                child: Stack(
-                  alignment: Alignment.bottomCenter,
-                  children: [
-                    PageView.builder(
-                      controller: _pageController,
-                      onPageChanged: _onTipPageChanged,
-                      itemCount: _dailyTips.length,
-                      itemBuilder: (context, idx) {
-                        final tip = _dailyTips[idx];
-                        return Card(
-                          color: Theme.of(context).colorScheme.secondary.withOpacity(0.1),
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                          child: ListTile(
-                            leading: tip['image'] != null
-                                ? ClipRRect(
-                                    borderRadius: BorderRadius.circular(8),
-                                    child: Image.asset(
-                                      tip['image']!,
-                                      width: 48,
-                                      height: 48,
-                                      fit: BoxFit.cover,
-                                      errorBuilder: (context, error, stackTrace) =>
-                                          const Icon(Icons.lightbulb, size: 48),
-                                    ),
-                                  )
-                                : const Icon(Icons.lightbulb, size: 48),
-                            title: Text(tip['title']!, style: const TextStyle(fontWeight: FontWeight.bold)),
-                            subtitle: Text(tip['message']!),
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    return Stack(
+      children: [
+        // Background gradient sesuai tema
+        Container(
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              colors: isDark
+                  ? [
+                      const Color(0xFF23272F),
+                      const Color(0xFF181A20),
+                      const Color(0xFF23272F),
+                    ]
+                  : [
+                      const Color(0xFF1976D2),
+                      const Color(0xFF64B5F6),
+                      const Color(0xFFFFFDE4),
+                    ],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+          ),
+        ),
+        SingleChildScrollView(
+          child: Padding(
+            padding: const EdgeInsets.only(bottom: 24),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const SizedBox(height: 50),
+                // Tips Harian Carousel
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+                  child: SizedBox(
+                    height: 120,
+                    child: Stack(
+                      alignment: Alignment.bottomCenter,
+                      children: [
+                        PageView.builder(
+                          controller: _pageController,
+                          onPageChanged: _onTipPageChanged,
+                          itemCount: _dailyTips.length,
+                          itemBuilder: (context, idx) {
+                            final tip = _dailyTips[idx];
+                            return Card(
+                              elevation: 5,
+                              color: isDark
+                                  ? Colors.grey[900]?.withOpacity(0.13)
+                                  : Theme.of(context).colorScheme.secondary.withOpacity(0.13),
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                              child: ListTile(
+                                leading: tip['image'] != null
+                                    ? ClipRRect(
+                                        borderRadius: BorderRadius.circular(1),
+                                        child: Image.asset(
+                                          tip['image']!,
+                                          width: 48,
+                                          height: 48,
+                                          fit: BoxFit.cover,
+                                          errorBuilder: (context, error, stackTrace) =>
+                                              const Icon(Icons.lightbulb, size: 48),
+                                        ),
+                                      )
+                                    : const Icon(Icons.lightbulb, size: 48),
+                                title: Text(tip['title']!, style: const TextStyle(fontWeight: FontWeight.bold)),
+                                subtitle: Text(tip['message']!),
+                              ),
+                            );
+                          },
+                        ),
+                        // Dots indicator
+                        Positioned(
+                          bottom: 15,
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: List.generate(_dailyTips.length, (idx) {
+                              return Container(
+                                margin: const EdgeInsets.symmetric(horizontal: 3),
+                                width: _currentTip == idx ? 14 : 8,
+                                height: 8,
+                                decoration: BoxDecoration(
+                                  color: _currentTip == idx
+                                      ? Theme.of(context).colorScheme.secondary
+                                      : Colors.grey[400],
+                                  borderRadius: BorderRadius.circular(4),
+                                ),
+                              );
+                            }),
                           ),
-                        );
-                      },
+                        ),
+                      ],
                     ),
-                    // Dots indicator
-                    Positioned(
-                      bottom: 8,
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: List.generate(_dailyTips.length, (idx) {
-                          return Container(
-                            margin: const EdgeInsets.symmetric(horizontal: 3),
-                            width: _currentTip == idx ? 14 : 8,
-                            height: 8,
-                            decoration: BoxDecoration(
-                              color: _currentTip == idx
-                                  ? Theme.of(context).colorScheme.secondary
-                                  : Colors.grey[400],
-                              borderRadius: BorderRadius.circular(4),
-                            ),
-                          );
-                        }),
+                  ),
+                ),
+                const SizedBox(height: 32),
+                // Kuis Finansial
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                  child: Card(
+                    elevation: 4,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                    color: isDark ? Colors.grey[900] : Colors.white,
+                    child: Padding(
+                      padding: const EdgeInsets.all(16),
+                      child: _showResult
+                          ? Column(
+                              children: [
+                                Text('Skor Anda: $_score / ${_quizQuestions.length}',
+                                    style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                                const SizedBox(height: 12),
+                                ElevatedButton(
+                                  onPressed: _resetQuiz,
+                                  child: const Text('Ulangi Kuis (Soal & Tips Baru)'),
+                                ),
+                              ],
+                            )
+                          : _buildQuizQuestion(_quizQuestions[_quizIndex]),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 32),
+                // Berita & Video Edukasi Keuangan
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                  child: Card(
+                    elevation: 4,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                    color: isDark ? Colors.grey[900] : Colors.white,
+                    child: Padding(
+                      padding: const EdgeInsets.all(12),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text(
+                            'Berita & Video Edukasi',
+                            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                          ),
+                          const SizedBox(height: 10),
+                          ..._eduLinks.map((item) => Card(
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                                color: isDark ? Colors.grey[850] : Colors.white,
+                                child: ListTile(
+                                  leading: item['icon'] == 'video'
+                                      ? const Icon(Icons.play_circle_fill, color: Colors.red)
+                                      : const Icon(Icons.article, color: Colors.blue),
+                                  title: Text(item['title'] ?? ''),
+                                  subtitle: Text(item['subtitle'] ?? ''),
+                                  onTap: () async {
+                                    final url = item['url'];
+                                    if (url != null && await canLaunchUrl(Uri.parse(url))) {
+                                      await launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication);
+                                    } else {
+                                      ScaffoldMessenger.of(context).showSnackBar(
+                                        const SnackBar(content: Text('Tidak dapat membuka link')),
+                                      );
+                                    }
+                                  },
+                                  trailing: const Icon(Icons.open_in_new),
+                                ),
+                              )),
+                        ],
                       ),
                     ),
-                  ],
-                ),
-              ),
-            ),
-            const SizedBox(height: 32),
-            // Kuis Finansial
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16.0),
-              child: Card(
-                elevation: 2,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                child: Padding(
-                  padding: const EdgeInsets.all(16),
-                  child: _showResult
-                      ? Column(
-                          children: [
-                            Text('Skor Anda: $_score / ${_quizQuestions.length}',
-                                style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-                            const SizedBox(height: 12),
-                            ElevatedButton(
-                              onPressed: _resetQuiz,
-                              child: const Text('Ulangi Kuis (Soal & Tips Baru)'),
-                            ),
-                          ],
-                        )
-                      : _buildQuizQuestion(_quizQuestions[_quizIndex]),
-                ),
-              ),
-            ),
-            const SizedBox(height: 32),
-            // Berita & Video Edukasi Keuangan
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16.0),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text(
-                    'Berita & Video Edukasi',
-                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
                   ),
-                  const SizedBox(height: 12),
-                  ..._eduLinks.map((item) => Card(
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                        child: ListTile(
-                          leading: item['icon'] == 'video'
-                              ? const Icon(Icons.play_circle_fill, color: Colors.red)
-                              : const Icon(Icons.article, color: Colors.blue),
-                          title: Text(item['title'] ?? ''),
-                          subtitle: Text(item['subtitle'] ?? ''),
-                          onTap: () async {
-                            final url = item['url'];
-                            if (url != null && await canLaunchUrl(Uri.parse(url))) {
-                              await launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication);
-                            } else {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(content: Text('Tidak dapat membuka link')),
-                              );
-                            }
-                          },
-                          trailing: const Icon(Icons.open_in_new),
-                        ),
-                      )),
-                ],
-              ),
+                ),
+                const SizedBox(height: 32),
+              ],
             ),
-            const SizedBox(height: 32),
-          ],
+          ),
         ),
-      ),
+      ],
     );
   }
 

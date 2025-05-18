@@ -4,7 +4,7 @@ import 'screens/chart_screen.dart';
 import 'screens/records_screen.dart';
 import 'screens/add_screen.dart';
 import 'screens/tips_screen.dart';
-import 'screens/other_screen.dart';
+import 'screens/settings_screen.dart';
 import 'screens/auth_screen.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'firebase_options.dart';
@@ -15,6 +15,8 @@ void main() async {
   await Hive.initFlutter();
   await Hive.openBox('users');
   await Hive.openBox('records');
+  await Hive.openBox('budgets');
+  await Hive.openBox('prefs'); // Tambahkan prefs box
   runApp(const MainApp());
 }
 
@@ -27,17 +29,75 @@ class MainApp extends StatefulWidget {
 
 class _MainAppState extends State<MainApp> {
   String? username;
+  String? email;
   ThemeMode _themeMode = ThemeMode.light;
 
-  void _onProfileChanged(String newUsername) {
+  @override
+  void initState() {
+    super.initState();
+    _loadPrefs();
+  }
+
+  Future<void> _loadPrefs() async {
+    final prefs = Hive.box('prefs');
+    setState(() {
+      username = prefs.get('username');
+      email = prefs.get('email');
+      final themeStr = prefs.get('themeMode');
+      if (themeStr == 'dark') {
+        _themeMode = ThemeMode.dark;
+      } else if (themeStr == 'light') {
+        _themeMode = ThemeMode.light;
+      } else if (themeStr == 'system') {
+        _themeMode = ThemeMode.system;
+      }
+    });
+  }
+
+  void _onProfileChanged(String newUsername) async {
+    final prefs = Hive.box('prefs');
+    await prefs.put('username', newUsername);
     setState(() {
       username = newUsername;
     });
   }
 
-  void _changeTheme(ThemeMode mode) {
+  void _changeTheme(ThemeMode mode) async {
+    final prefs = Hive.box('prefs');
+    String themeStr = 'light';
+    if (mode == ThemeMode.dark) themeStr = 'dark';
+    else if (mode == ThemeMode.system) themeStr = 'system';
+    await prefs.put('themeMode', themeStr);
     setState(() {
       _themeMode = mode;
+    });
+  }
+
+  void _onLogin(String userEmail) async {
+    final usersBox = Hive.box('users');
+    final userData = usersBox.get(userEmail);
+    String userName = '';
+    if (userData is Map && userData['username'] != null) {
+      userName = userData['username'];
+    } else {
+      userName = userEmail;
+    }
+    final prefs = Hive.box('prefs');
+    await prefs.put('email', userEmail);
+    await prefs.put('username', userName);
+    setState(() {
+      email = userEmail;
+      username = userName;
+    });
+  }
+
+  void _onLogout() async {
+    final prefs = Hive.box('prefs');
+    await prefs.delete('username');
+    await prefs.delete('email');
+    setState(() {
+      username = null;
+      email = null;
     });
   }
 
@@ -106,11 +166,12 @@ class _MainAppState extends State<MainApp> {
       ),
       themeMode: _themeMode,
       home:
-          username == null
-              ? AuthScreen(onLogin: (user) => setState(() => username = user))
+          username == null || email == null
+              ? AuthScreen(onLogin: _onLogin)
               : HomeScreen(
                 username: username!,
-                onLogout: () => setState(() => username = null),
+                email: email!,
+                onLogout: _onLogout,
                 onProfileChanged: _onProfileChanged,
                 themeMode: _themeMode,
                 onThemeChanged: _changeTheme,
@@ -121,6 +182,7 @@ class _MainAppState extends State<MainApp> {
 
 class HomeScreen extends StatefulWidget {
   final String username;
+  final String email;
   final VoidCallback onLogout;
   final void Function(String newUsername) onProfileChanged;
   final ThemeMode themeMode;
@@ -128,6 +190,7 @@ class HomeScreen extends StatefulWidget {
   const HomeScreen({
     super.key,
     required this.username,
+    required this.email,
     required this.onLogout,
     required this.onProfileChanged,
     required this.themeMode,
@@ -151,7 +214,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
   void _loadBudget() async {
     final box = await Hive.openBox('budgets');
-    final key = "${widget.username}_${selectedDate.year}_${selectedDate.month}";
+    final key = "${widget.email}_${selectedDate.year}_${selectedDate.month}";
     setState(() {
       currentBudget = box.get(key)?.toDouble();
     });
@@ -184,7 +247,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 onPressed: () {
                   final value = double.tryParse(controller.text);
                   final key =
-                      "${widget.username}_${selectedDate.year}_${selectedDate.month}";
+                      "${widget.email}_${selectedDate.year}_${selectedDate.month}";
                   if (value != null && value > 0) {
                     box.put(key, value);
                     setState(() {
@@ -295,28 +358,29 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget build(BuildContext context) {
     final List<Widget> screens = [
       ChartScreen(
-        username: widget.username,
+        email: widget.email,
         selectedDate: selectedDate,
         onPickMonth: _pickMonth,
         budget: currentBudget,
         onSetBudget: _setBudgetDialog,
       ),
       RecordsScreen(
-        username: widget.username,
+        email: widget.email,
         selectedDate: selectedDate,
         onPickMonth: _pickMonth,
         budget: currentBudget,
         onSetBudget: _setBudgetDialog,
       ),
       AddScreen(
-        username: widget.username,
+        email: widget.email,
         selectedDate: selectedDate,
         onPickMonth: _pickMonth,
         budget: currentBudget,
         onSetBudget: _setBudgetDialog,
       ),
       const TipsScreen(),
-      OtherScreen(
+      SettingsScreen(
+        email: widget.email,
         username: widget.username,
         onLogout: widget.onLogout,
         onProfileChanged: (newUsername) {
@@ -343,7 +407,7 @@ class _HomeScreenState extends State<HomeScreen> {
             label: 'add',
           ),
           BottomNavigationBarItem(icon: Icon(Icons.lightbulb), label: 'tips'),
-          BottomNavigationBarItem(icon: Icon(Icons.more_horiz), label: 'other'),
+          BottomNavigationBarItem(icon: Icon(Icons.settings), label: 'settings'),
         ],
       ),
     );

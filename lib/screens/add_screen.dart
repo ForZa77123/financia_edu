@@ -4,14 +4,14 @@ import 'package:hive/hive.dart';
 import '../models/record.dart';
 
 class AddScreen extends StatefulWidget {
-  final String username;
+  final String email; // gunakan email sebagai key
   final DateTime selectedDate;
   final Future<void> Function()? onPickMonth;
   final double? budget;
   final Future<void> Function()? onSetBudget;
   const AddScreen({
     super.key,
-    required this.username,
+    required this.email,
     required this.selectedDate,
     this.onPickMonth,
     this.budget,
@@ -73,9 +73,13 @@ class _AddScreenState extends State<AddScreen> {
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     final categories = isExpense ? expenseCategories : incomeCategories;
     return Scaffold(
+      extendBodyBehindAppBar: true,
       appBar: AppBar(
+        backgroundColor: Colors.transparent,
+        elevation: 0,
         title: Text(
           "${_monthName(selectedDate.month)} ${selectedDate.year} - ADD",
           style: const TextStyle(fontWeight: FontWeight.bold),
@@ -93,7 +97,6 @@ class _AddScreenState extends State<AddScreen> {
           ),
           IconButton(
             onPressed: () {
-              // Tampilkan dialog info sederhana
               showDialog(
                 context: context,
                 builder: (context) => AlertDialog(
@@ -112,96 +115,148 @@ class _AddScreenState extends State<AddScreen> {
           ),
         ],
       ),
-      body: Column(
+      body: Stack(
         children: [
-          // Toggle buttons for expense/income
+          // Background gradient sesuai tema
           Container(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-            child: Row(
-              children: [
-                Expanded(
-                  child: ElevatedButton(
-                    onPressed: () => setState(() {
-                      isExpense = true;
-                      selectedCategory = null;
-                    }),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: isExpense ? colorScheme.primary : colorScheme.primary.withOpacity(0.08),
-                      foregroundColor: isExpense ? Colors.white : colorScheme.primary,
-                      elevation: 0,
-                    ),
-                    child: const Text('EXPENSE'),
-                  ),
-                ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: ElevatedButton(
-                    onPressed: () => setState(() {
-                      isExpense = false;
-                      selectedCategory = null;
-                    }),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: !isExpense ? colorScheme.secondary : colorScheme.secondary.withOpacity(0.08),
-                      foregroundColor: !isExpense ? Colors.white : colorScheme.secondary,
-                      elevation: 0,
-                    ),
-                    child: const Text('INCOME'),
-                  ),
-                ),
-              ],
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                colors: isDark
+                    ? [
+                        const Color(0xFF23272F),
+                        const Color(0xFF181A20),
+                        const Color(0xFF23272F),
+                      ]
+                    : [
+                        const Color(0xFF1976D2),
+                        const Color(0xFF64B5F6),
+                        const Color(0xFFFFFDE4),
+                      ],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
             ),
           ),
-
-          // Category grid
-          Expanded(
-            child: GridView.builder(
-              padding: const EdgeInsets.all(16),
-              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                crossAxisCount: 4,
-                mainAxisSpacing: 16,
-                crossAxisSpacing: 16,
+          Column(
+            children: [
+              const SizedBox(height: kToolbarHeight + 8),
+              SizedBox(height: 24),
+              // Toggle buttons for expense/income
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: ElevatedButton(
+                        onPressed: () => setState(() {
+                          isExpense = true;
+                          selectedCategory = null;
+                        }),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: isExpense ? colorScheme.primary : colorScheme.primary.withOpacity(0.08),
+                          foregroundColor: isExpense ? Colors.white : colorScheme.primary,
+                          elevation: 0,
+                        ),
+                        child: const Text('EXPENSE'),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: ElevatedButton(
+                        onPressed: () => setState(() {
+                          isExpense = false;
+                          selectedCategory = null;
+                        }),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: !isExpense ? colorScheme.secondary : colorScheme.secondary.withOpacity(0.08),
+                          foregroundColor: !isExpense ? Colors.white : colorScheme.secondary,
+                          elevation: 0,
+                        ),
+                        child: const Text('INCOME'),
+                      ),
+                    ),
+                  ],
+                ),
               ),
-              itemCount: categories.length,
-              itemBuilder: (context, index) {
-                final category = categories[index];
-                final isSelected = selectedCategory == category['name'];
-                return GestureDetector(
-                  onTap: () {
-                    setState(() => selectedCategory = category['name']);
-                    _showAmountInputModal(context, category);
-                  },
-                  child: Column(
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.all(12),
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          color: isSelected
-                              ? colorScheme.primary.withOpacity(0.15)
-                              : colorScheme.primary.withOpacity(0.05),
-                          border: isSelected
-                              ? Border.all(color: colorScheme.primary, width: 2)
-                              : null,
-                        ),
-                        child: Icon(
-                          category['icon'],
-                          color: isSelected ? colorScheme.primary : Colors.grey[600],
-                        ),
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        category['name'],
-                        style: TextStyle(
-                          color: isSelected ? colorScheme.primary : Colors.grey[600],
-                          fontSize: 12,
-                          fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-                        ),
-                      ),
-                    ],
+              // Category grid with grid box for icons
+              Expanded(
+                child: GridView.builder(
+                  padding: const EdgeInsets.all(16),
+                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                    crossAxisCount: 4,
+                    mainAxisSpacing: 16,
+                    crossAxisSpacing: 16,
                   ),
-                );
-              },
-            ),
+                  itemCount: categories.length,
+                  itemBuilder: (context, index) {
+                    final category = categories[index];
+                    final isSelected = selectedCategory == category['name'];
+                    return GestureDetector(
+                      onTap: () {
+                        setState(() => selectedCategory = category['name']);
+                        _showAmountInputModal(context, category);
+                      },
+                      child: Column(
+                        children: [
+                          Container(
+                            decoration: BoxDecoration(
+                              color: isSelected
+                                  ? colorScheme.primary.withOpacity(0.18)
+                                  : (isDark
+                                      ? Colors.white.withOpacity(0.07)
+                                      : Colors.white),
+                              borderRadius: BorderRadius.circular(16),
+                              border: isSelected
+                                  ? Border.all(color: colorScheme.primary, width: 2)
+                                  : Border.all(
+                                      color: isDark
+                                          ? Colors.white24
+                                          : Colors.grey.shade300,
+                                      width: 1,
+                                    ),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: isDark
+                                      ? Colors.black.withOpacity(0.12)
+                                      : Colors.grey.withOpacity(0.10),
+                                  blurRadius: 6,
+                                  offset: const Offset(0, 2),
+                                ),
+                              ],
+                            ),
+                            width: 56,
+                            height: 56,
+                            child: Center(
+                              child: Icon(
+                                category['icon'],
+                                color: isSelected
+                                    ? colorScheme.primary
+                                    : (isDark
+                                        ? Colors.white
+                                        : Colors.grey[700]),
+                                size: 28,
+                              ),
+                            ),
+                          ),
+                          const SizedBox(height: 6),
+                          Text(
+                            category['name'],
+                            textAlign: TextAlign.center,
+                            style: TextStyle(
+                              color: isSelected
+                                  ? colorScheme.primary
+                                  : (isDark ? Colors.white70 : Colors.grey[700]),
+                              fontSize: 12,
+                              fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                            ),
+                          ),
+                        ],
+                      ),
+                    );
+                  },
+                ),
+              ),
+            ],
           ),
         ],
       ),
@@ -218,25 +273,29 @@ class _AddScreenState extends State<AddScreen> {
 
   void _showAmountInputModal(BuildContext context, Map<String, dynamic> category) {
     final colorScheme = Theme.of(context).colorScheme;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     final TextEditingController amountController = TextEditingController();
     DateTime tempDate = selectedDate;
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      backgroundColor: Colors.grey[900],
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-      ),
+      backgroundColor: Colors.transparent,
       builder: (context) {
-        return StatefulBuilder(
-          builder: (context, setModalState) {
-            return Padding(
-              padding: EdgeInsets.only(
-                left: 24,
-                right: 24,
-                top: 24,
-                bottom: MediaQuery.of(context).viewInsets.bottom + 24,
-              ),
+        return Padding(
+          padding: EdgeInsets.only(
+            left: 8,
+            right: 8,
+            top: 8,
+            bottom: MediaQuery.of(context).viewInsets.bottom + 8,
+          ),
+          child: Card(
+            elevation: 8,
+            shape: const RoundedRectangleBorder(
+              borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+            ),
+            color: isDark ? Colors.grey[900] : Colors.white,
+            child: Padding(
+              padding: const EdgeInsets.all(24),
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
@@ -274,7 +333,7 @@ class _AddScreenState extends State<AddScreen> {
                             lastDate: DateTime.now(),
                           );
                           if (picked != null) {
-                            setModalState(() {
+                            setState(() {
                               tempDate = picked;
                             });
                           }
@@ -294,14 +353,23 @@ class _AddScreenState extends State<AddScreen> {
                   TextField(
                     controller: amountController,
                     keyboardType: TextInputType.number,
-                    style: const TextStyle(fontSize: 28, color: Colors.white),
+                    style: TextStyle(
+                      fontSize: 28,
+                      color: isDark ? Colors.white : Colors.black,
+                    ),
                     decoration: InputDecoration(
                       prefixText: 'Rp ',
-                      prefixStyle: TextStyle(fontSize: 24, color: colorScheme.secondary),
+                      prefixStyle: TextStyle(
+                        fontSize: 24,
+                        color: colorScheme.secondary,
+                      ),
                       hintText: '0',
-                      hintStyle: const TextStyle(fontSize: 28, color: Colors.white54),
+                      hintStyle: TextStyle(
+                        fontSize: 28,
+                        color: isDark ? Colors.white54 : Colors.black54,
+                      ),
                       filled: true,
-                      fillColor: Colors.grey[850],
+                      fillColor: isDark ? Colors.grey[850] : Colors.grey[200],
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(16),
                         borderSide: BorderSide.none,
@@ -317,16 +385,16 @@ class _AddScreenState extends State<AddScreen> {
                         final amount = int.tryParse(amountController.text) ?? 0;
                         if (amount > 0) {
                           final record = Record(
-                            username: widget.username,
+                            email: widget.email, // gunakan email
                             type: isExpense ? 'expense' : 'income',
                             category: category['name'],
                             amount: amount,
                             date: tempDate,
                           );
                           final box = Hive.box('records');
-                          final records = box.get(widget.username, defaultValue: <Map>[]) as List;
+                          final records = box.get(widget.email, defaultValue: <Map>[]) as List;
                           records.add(record.toMap());
-                          await box.put(widget.username, records);
+                          await box.put(widget.email, records);
                           setState(() { selectedDate = tempDate; });
 
                           // Cek budget setelah menambah expense
@@ -365,8 +433,8 @@ class _AddScreenState extends State<AddScreen> {
                   ),
                 ],
               ),
-            );
-          },
+            ),
+          ),
         );
       },
     );

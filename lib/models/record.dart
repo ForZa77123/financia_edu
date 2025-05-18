@@ -1,12 +1,12 @@
 class Record {
-  final String username;
+  final String email; // ganti dari username ke email
   final String type; // 'expense' atau 'income'
   final String category;
   final int amount;
   final DateTime date;
 
   Record({
-    required this.username,
+    required this.email,
     required this.type,
     required this.category,
     required this.amount,
@@ -14,7 +14,7 @@ class Record {
   });
 
   Map<String, dynamic> toMap() => {
-    'username': username,
+    'email': email,
     'type': type,
     'category': category,
     'amount': amount,
@@ -22,7 +22,7 @@ class Record {
   };
 
   factory Record.fromMap(Map<String, dynamic> map) => Record(
-    username: map['username'],
+    email: map['email'],
     type: map['type'],
     category: map['category'],
     amount: map['amount'],
