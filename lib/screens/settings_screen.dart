@@ -3,8 +3,9 @@ import 'package:hive/hive.dart';
 import 'dart:io';
 import 'package:image_picker/image_picker.dart';
 
-class OtherScreen extends StatefulWidget {
-  final String username;
+class SettingsScreen extends StatefulWidget {
+  final String email; // email digunakan untuk login dan key di Hive
+  final String username; // username hanya untuk display dan bisa diubah
   final VoidCallback? onLogout;
   final void Function(String newUsername)? onProfileChanged;
   final Future<void> Function()? onSetBudget;
@@ -12,8 +13,9 @@ class OtherScreen extends StatefulWidget {
   final double? budget;
   final ThemeMode? themeMode;
   final void Function(ThemeMode)? onThemeChanged;
-  const OtherScreen({
+  const SettingsScreen({
     super.key,
+    required this.email,
     required this.username,
     this.onLogout,
     this.onProfileChanged,
@@ -25,28 +27,28 @@ class OtherScreen extends StatefulWidget {
   });
 
   @override
-  State<OtherScreen> createState() => _OtherScreenState();
+  State<SettingsScreen> createState() => _SettingsScreenState();
 }
 
-class _OtherScreenState extends State<OtherScreen> {
+class _SettingsScreenState extends State<SettingsScreen> {
   String? profileImagePath;
 
   @override
   void initState() {
     super.initState();
     final usersBox = Hive.box('users');
-    final userData = usersBox.get(widget.username);
+    final userData = usersBox.get(widget.email);
     if (userData is Map && userData['profileImage'] != null) {
       profileImagePath = userData['profileImage'];
     }
   }
 
   @override
-  void didUpdateWidget(covariant OtherScreen oldWidget) {
+  void didUpdateWidget(covariant SettingsScreen oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (widget.username != oldWidget.username) {
+    if (widget.email != oldWidget.email) {
       final usersBox = Hive.box('users');
-      final userData = usersBox.get(widget.username);
+      final userData = usersBox.get(widget.email);
       if (userData is Map && userData['profileImage'] != null) {
         setState(() {
           profileImagePath = userData['profileImage'];
@@ -57,24 +59,23 @@ class _OtherScreenState extends State<OtherScreen> {
 
   Future<void> _editProfile() async {
     final usersBox = Hive.box('users');
-    final oldUsername = widget.username;
-    final userDataRaw = usersBox.get(oldUsername);
-    Map? userData;
+    final prefsBox = Hive.isBoxOpen('prefs') ? Hive.box('prefs') : null;
+    final userDataRaw = usersBox.get(widget.email);
+    Map userData;
     if (userDataRaw is Map) {
       userData = userDataRaw;
     } else if (userDataRaw is String) {
-      // Jika data lama berupa String (misal hanya password), konversi ke Map
       userData = {'password': userDataRaw};
     } else {
       userData = {};
     }
     final TextEditingController usernameController = TextEditingController(
-      text: oldUsername,
+      text: userData['username'] ?? widget.username,
     );
-    final TextEditingController passwordController = TextEditingController(
-      text: userData['password'] ?? '',
-    );
+    final TextEditingController oldPasswordController = TextEditingController();
+    final TextEditingController newPasswordController = TextEditingController();
     String? newProfileImage = profileImagePath;
+    String? errorMsg;
 
     await showDialog(
       context: context,
@@ -122,11 +123,35 @@ class _OtherScreenState extends State<OtherScreen> {
                       decoration: const InputDecoration(labelText: 'Username'),
                     ),
                     const SizedBox(height: 8),
+                    // Password section
                     TextField(
-                      controller: passwordController,
-                      decoration: const InputDecoration(labelText: 'Password'),
+                      controller: oldPasswordController,
+                      decoration: const InputDecoration(
+                        labelText: 'Password Lama',
+                      ),
                       obscureText: true,
                     ),
+                    const SizedBox(height: 8),
+                    TextField(
+                      controller: newPasswordController,
+                      decoration: const InputDecoration(
+                        labelText: 'Password Baru',
+                      ),
+                      obscureText: true,
+                    ),
+                    const SizedBox(height: 8),
+                    TextField(
+                      enabled: false,
+                      decoration: InputDecoration(
+                        labelText: 'Email',
+                        hintText: widget.email,
+                      ),
+                    ),
+                    if (errorMsg != null)
+                      Padding(
+                        padding: const EdgeInsets.only(top: 8),
+                        child: Text(errorMsg!, style: const TextStyle(color: Colors.red)),
+                      ),
                   ],
                 ),
               ),
@@ -138,37 +163,44 @@ class _OtherScreenState extends State<OtherScreen> {
                 ElevatedButton(
                   onPressed: () async {
                     final newUsername = usernameController.text.trim();
-                    final newPassword = passwordController.text.trim();
-                    if (newUsername.isEmpty || newPassword.isEmpty) return;
-                    // Cek jika username berubah dan belum dipakai user lain
-                    if (newUsername != oldUsername &&
-                        usersBox.containsKey(newUsername)) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text('Username sudah digunakan'),
-                        ),
-                      );
+                    final oldPassword = oldPasswordController.text.trim();
+                    final newPassword = newPasswordController.text.trim();
+                    final currentPassword = userData['password'] ?? '';
+                    // Username wajib diisi
+                    if (newUsername.isEmpty) {
+                      setDialogState(() {
+                        errorMsg = "Username wajib diisi";
+                      });
                       return;
                     }
-                    // Update data user
+                    // Jika ingin ganti password, harus isi password lama & baru
+                    if (oldPassword.isNotEmpty || newPassword.isNotEmpty) {
+                      if (oldPassword.isEmpty || newPassword.isEmpty) {
+                        setDialogState(() {
+                          errorMsg = "Isi password lama dan password baru untuk mengubah password";
+                        });
+                        return;
+                      }
+                      if (oldPassword != currentPassword) {
+                        setDialogState(() {
+                          errorMsg = "Password lama salah";
+                        });
+                        return;
+                      }
+                    }
+                    // Update data user (key tetap email)
+                    final updatedPassword = (oldPassword.isNotEmpty && newPassword.isNotEmpty)
+                        ? newPassword
+                        : currentPassword;
                     final newUserData = {
-                      'password': newPassword,
+                      'username': newUsername,
+                      'password': updatedPassword,
                       'profileImage': newProfileImage,
                     };
-                    await usersBox.put(newUsername, newUserData);
-                    if (newUsername != oldUsername) {
-                      await usersBox.delete(oldUsername);
-                      // Pindahkan data records ke username baru
-                      final recordsBox = Hive.box('records');
-                      final oldRecords =
-                          recordsBox.get(oldUsername, defaultValue: <Map>[])
-                              as List;
-                      await recordsBox.put(newUsername, oldRecords);
-                      await recordsBox.delete(oldUsername);
-                    } else {
-                      // Update profile image jika username tidak berubah
-                      final recordsBox = Hive.box('records');
-                      // Tidak perlu update records
+                    await usersBox.put(widget.email, newUserData);
+                    // Sinkronkan password baru ke prefs jika ada
+                    if (prefsBox != null) {
+                      await prefsBox.put('password', updatedPassword);
                     }
                     setState(() {
                       profileImagePath = newProfileImage;
@@ -179,6 +211,114 @@ class _OtherScreenState extends State<OtherScreen> {
                     }
                   },
                   child: const Text('Simpan'),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+  }
+
+  Future<void> _resetFinancialData() async {
+    final usersBox = Hive.box('users');
+    final userData = usersBox.get(widget.email);
+    String? correctPassword;
+    if (userData is Map && userData['password'] != null) {
+      correctPassword = userData['password'];
+    } else if (userData is String) {
+      correctPassword = userData;
+    }
+    final TextEditingController passController = TextEditingController();
+    bool isLoading = false;
+    String? errorMsg;
+
+    await showDialog(
+      context: context,
+      barrierDismissible: !isLoading,
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setDialogState) {
+            return AlertDialog(
+              title: const Text('Reset Data Keuangan'),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Text(
+                    'Masukkan password akun Anda untuk menghapus seluruh data keuangan (catatan & budget) akun ini. Tindakan ini tidak dapat dibatalkan.',
+                    style: TextStyle(fontSize: 14),
+                  ),
+                  const SizedBox(height: 16),
+                  TextField(
+                    controller: passController,
+                    obscureText: true,
+                    decoration: const InputDecoration(
+                      labelText: 'Password',
+                    ),
+                  ),
+                  if (errorMsg != null)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 8),
+                      child: Text(errorMsg!, style: const TextStyle(color: Colors.red)),
+                    ),
+                ],
+              ),
+              actions: [
+                TextButton(
+                  onPressed: isLoading ? null : () => Navigator.pop(context),
+                  child: const Text('Batal'),
+                ),
+                ElevatedButton(
+                  onPressed: isLoading
+                      ? null
+                      : () async {
+                          setDialogState(() => isLoading = true);
+                          final inputPass = passController.text.trim();
+                          if (inputPass.isEmpty) {
+                            setDialogState(() {
+                              errorMsg = "Password wajib diisi";
+                              isLoading = false;
+                            });
+                            return;
+                          }
+                          if (correctPassword == null || inputPass != correctPassword) {
+                            setDialogState(() {
+                              errorMsg = "Password salah";
+                              isLoading = false;
+                            });
+                            return;
+                          }
+                          // Hapus data keuangan
+                          final recordsBox = Hive.box('records');
+                          final budgetsBox = Hive.box('budgets');
+                          await recordsBox.delete(widget.email);
+                          final keysToDelete = budgetsBox.keys
+                              .where((k) => k.toString().startsWith(widget.email))
+                              .toList();
+                          for (final k in keysToDelete) {
+                            await budgetsBox.delete(k);
+                          }
+                          setDialogState(() => isLoading = false);
+                          Navigator.pop(context);
+                          if (mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text('Data keuangan berhasil direset.'),
+                                backgroundColor: Colors.red,
+                              ),
+                            );
+                          }
+                        },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.red,
+                  ),
+                  child: isLoading
+                      ? const SizedBox(
+                          width: 18,
+                          height: 18,
+                          child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                        )
+                      : const Text('Reset Data'),
                 ),
               ],
             );
@@ -229,6 +369,7 @@ class _OtherScreenState extends State<OtherScreen> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
+                            // Tampilkan username dari widget
                             widget.username,
                             style: const TextStyle(
                               fontSize: 20,
@@ -236,15 +377,14 @@ class _OtherScreenState extends State<OtherScreen> {
                             ),
                           ),
                           Text(
-                            '${widget.username}@email.com',
+                            widget.email,
                             style: TextStyle(color: Colors.grey[600]),
                           ),
                         ],
                       ),
                     ),
                     IconButton(
-                      onPressed:
-                          _editProfile, // Sudah benar, icon edit memanggil fungsi edit profile
+                      onPressed: _editProfile,
                       icon: Icon(Icons.edit, color: colorScheme.primary),
                     ),
                   ],
@@ -334,6 +474,12 @@ class _OtherScreenState extends State<OtherScreen> {
                       );
                       if (selected != null && widget.onThemeChanged != null) {
                         widget.onThemeChanged!(selected);
+                        // Simpan theme ke prefs
+                        final prefs = Hive.box('prefs');
+                        String themeStr = 'light';
+                        if (selected == ThemeMode.dark) themeStr = 'dark';
+                        else if (selected == ThemeMode.system) themeStr = 'system';
+                        await prefs.put('themeMode', themeStr);
                       }
                     },
                   ),
@@ -352,6 +498,39 @@ class _OtherScreenState extends State<OtherScreen> {
                       Icons.chevron_right,
                       color: colorScheme.primary,
                     ),
+                    onTap: () {
+                      showDialog(
+                        context: context,
+                        builder: (context) => AlertDialog(
+                          title: const Text('Tentang Aplikasi'),
+                          content: const Column(
+                            mainAxisSize: MainAxisSize.min,
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'FinEdu - Financial Education',
+                                style: TextStyle(fontWeight: FontWeight.bold),
+                              ),
+                              SizedBox(height: 8),
+                              Text(
+                                'Aplikasi edukasi keuangan untuk membantu pengguna mencatat pemasukan, pengeluaran, mengatur budget bulanan, serta mendapatkan tips dan kuis finansial. Cocok untuk pelajar dan siapa saja yang ingin belajar mengelola keuangan dengan mudah.',
+                              ),
+                              SizedBox(height: 12),
+                              Text(
+                                'Versi 0.1.0',
+                                style: TextStyle(fontSize: 12, color: Colors.grey),
+                              ),
+                            ],
+                          ),
+                          actions: [
+                            TextButton(
+                              onPressed: () => Navigator.pop(context),
+                              child: const Text('Tutup'),
+                            ),
+                          ],
+                        ),
+                      );
+                    },
                   ),
                   const Divider(),
                   ListTile(
@@ -412,6 +591,18 @@ class _OtherScreenState extends State<OtherScreen> {
                       color: colorScheme.primary,
                     ),
                     onTap: widget.onSetBudget,
+                  ),
+                  ListTile(
+                    leading: Icon(Icons.delete_forever, color: Colors.red),
+                    title: const Text(
+                      'Reset Data Keuangan',
+                      style: TextStyle(color: Colors.red),
+                    ),
+                    subtitle: const Text(
+                      'Hapus seluruh catatan & budget akun ini',
+                      style: TextStyle(fontSize: 13, color: Colors.red),
+                    ),
+                    onTap: _resetFinancialData,
                   ),
                 ],
               ),
