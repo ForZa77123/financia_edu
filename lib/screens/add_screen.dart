@@ -1,7 +1,22 @@
 import 'package:flutter/material.dart';
+import 'package:hive/hive.dart';
+
+import '../models/record.dart';
 
 class AddScreen extends StatefulWidget {
-  const AddScreen({super.key});
+  final String username;
+  final DateTime selectedDate;
+  final Future<void> Function()? onPickMonth;
+  final double? budget;
+  final Future<void> Function()? onSetBudget;
+  const AddScreen({
+    super.key,
+    required this.username,
+    required this.selectedDate,
+    this.onPickMonth,
+    this.budget,
+    this.onSetBudget,
+  });
 
   @override
   State<AddScreen> createState() => _AddScreenState();
@@ -40,20 +55,58 @@ class _AddScreenState extends State<AddScreen> {
   ];
 
   @override
+  void initState() {
+    super.initState();
+    selectedDate = widget.selectedDate;
+  }
+
+  @override
+  void didUpdateWidget(covariant AddScreen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.selectedDate != oldWidget.selectedDate) {
+      setState(() {
+        selectedDate = widget.selectedDate;
+      });
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
     final categories = isExpense ? expenseCategories : incomeCategories;
     return Scaffold(
       appBar: AppBar(
-        leading: TextButton(
-          onPressed: () => Navigator.pop(context),
-          child: const Text('cancel', style: TextStyle(color: Colors.white)),
+        title: Text(
+          "${_monthName(selectedDate.month)} ${selectedDate.year} - ADD",
+          style: const TextStyle(fontWeight: FontWeight.bold),
         ),
-        title: const Text('ADD'),
         actions: [
           IconButton(
+            icon: const Icon(Icons.calendar_today),
+            onPressed: widget.onPickMonth,
+            tooltip: "Pilih Bulan",
+          ),
+          IconButton(
+            icon: const Icon(Icons.account_balance_wallet),
+            onPressed: widget.onSetBudget,
+            tooltip: "Atur Budget",
+          ),
+          IconButton(
             onPressed: () {
-              // TODO: Implement settings
+              // Tampilkan dialog info sederhana
+              showDialog(
+                context: context,
+                builder: (context) => AlertDialog(
+                  title: const Text('Info'),
+                  content: const Text('Pengaturan belum tersedia.'),
+                  actions: [
+                    TextButton(
+                      onPressed: () => Navigator.pop(context),
+                      child: const Text('OK'),
+                    ),
+                  ],
+                ),
+              );
             },
             icon: const Icon(Icons.settings),
           ),
@@ -155,6 +208,14 @@ class _AddScreenState extends State<AddScreen> {
     );
   }
 
+  String _monthName(int month) {
+    const months = [
+      '', 'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni',
+      'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'
+    ];
+    return months[month];
+  }
+
   void _showAmountInputModal(BuildContext context, Map<String, dynamic> category) {
     final colorScheme = Theme.of(context).colorScheme;
     final TextEditingController amountController = TextEditingController();
@@ -252,11 +313,44 @@ class _AddScreenState extends State<AddScreen> {
                   SizedBox(
                     width: double.infinity,
                     child: ElevatedButton(
-                      onPressed: () {
-                        // TODO: Simpan data jumlah uang, kategori, dan tanggal
-                        setState(() {
-                          selectedDate = tempDate;
-                        });
+                      onPressed: () async {
+                        final amount = int.tryParse(amountController.text) ?? 0;
+                        if (amount > 0) {
+                          final record = Record(
+                            username: widget.username,
+                            type: isExpense ? 'expense' : 'income',
+                            category: category['name'],
+                            amount: amount,
+                            date: tempDate,
+                          );
+                          final box = Hive.box('records');
+                          final records = box.get(widget.username, defaultValue: <Map>[]) as List;
+                          records.add(record.toMap());
+                          await box.put(widget.username, records);
+                          setState(() { selectedDate = tempDate; });
+
+                          // Cek budget setelah menambah expense
+                          if (isExpense && widget.budget != null) {
+                            final filtered = records
+                              .map((e) => Record.fromMap(Map<String, dynamic>.from(e)))
+                              .where((r) =>
+                                r.type == 'expense' &&
+                                r.date.month == tempDate.month &&
+                                r.date.year == tempDate.year
+                              )
+                              .fold<int>(0, (sum, r) => sum + r.amount);
+                            if (filtered > widget.budget!) {
+                              // ignore: use_build_context_synchronously
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                  content: Text('Peringatan: Pengeluaran sudah melebihi budget!'),
+                                  backgroundColor: Colors.red,
+                                  duration: Duration(seconds: 3),
+                                ),
+                              );
+                            }
+                          }
+                        }
                         Navigator.pop(context);
                       },
                       style: ElevatedButton.styleFrom(

@@ -1,5 +1,7 @@
 import 'dart:async';
+import 'dart:math';
 import 'package:flutter/material.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 class TipsScreen extends StatefulWidget {
   const TipsScreen({super.key});
@@ -9,12 +11,8 @@ class TipsScreen extends StatefulWidget {
 }
 
 class _TipsScreenState extends State<TipsScreen> {
-  // Quiz state
-  int _quizIndex = 0;
-  int _score = 0;
-  bool _showResult = false;
-
-  final List<Map<String, dynamic>> _quizQuestions = [
+  // Bank soal quiz
+  final List<Map<String, dynamic>> _quizBank = [
     {
       'type': 'multiple',
       'question': 'Apa tujuan utama menabung?',
@@ -42,10 +40,75 @@ class _TipsScreenState extends State<TipsScreen> {
       ],
       'answer': 1,
     },
+    {
+      'type': 'multiple',
+      'question': 'Apa yang sebaiknya dilakukan sebelum membeli barang?',
+      'options': [
+        'Membandingkan harga dan kebutuhan',
+        'Langsung beli saja',
+        'Meminjam uang',
+        'Membeli yang paling mahal'
+      ],
+      'answer': 0,
+    },
+    {
+      'type': 'truefalse',
+      'question': 'Menabung hanya penting untuk orang dewasa.',
+      'answer': false,
+    },
+    {
+      'type': 'multiple',
+      'question': 'Jika kamu mendapat uang lebih, apa yang sebaiknya dilakukan?',
+      'options': [
+        'Menghabiskan semuanya',
+        'Menabung sebagian',
+        'Membelikan teman jajan',
+        'Menyembunyikan dari orang tua'
+      ],
+      'answer': 1,
+    },
+    {
+      'type': 'case',
+      'question': 'Siti ingin membeli sepatu baru, tapi uangnya belum cukup. Apa langkah terbaik?',
+      'options': [
+        'Meminjam uang ke teman',
+        'Menabung hingga cukup',
+        'Membeli sepatu bekas',
+        'Mengambil uang orang tua tanpa izin'
+      ],
+      'answer': 1,
+    },
+    {
+      'type': 'truefalse',
+      'question': 'Membuat anggaran bulanan bisa membantu mengatur keuangan.',
+      'answer': true,
+    },
+    {
+      'type': 'multiple',
+      'question': 'Apa manfaat mencatat pengeluaran?',
+      'options': [
+        'Agar tahu ke mana uang pergi',
+        'Agar bisa boros',
+        'Agar bisa minta uang lebih',
+        'Agar lupa pengeluaran'
+      ],
+      'answer': 0,
+    },
+    {
+      'type': 'case',
+      'question': 'Budi sering membeli jajanan setiap hari hingga uang sakunya habis. Apa saran terbaik?',
+      'options': [
+        'Kurangi jajan dan sisihkan untuk ditabung',
+        'Minta uang saku lebih banyak',
+        'Pinjam uang ke teman',
+        'Abaikan saja'
+      ],
+      'answer': 0,
+    },
   ];
 
-  // Daily tips
-  final List<Map<String, String>> _dailyTips = [
+  // Bank tips harian
+  final List<Map<String, String>> _tipsBank = [
     {
       'title': 'Menabung itu Keren!',
       'message': 'Sisihkan minimal 10% uang sakumu setiap hari untuk masa depan yang lebih baik.',
@@ -61,18 +124,125 @@ class _TipsScreenState extends State<TipsScreen> {
       'message': 'Utamakan kebutuhan daripada keinginan.',
       'image': 'assets/images/smart_spend.png',
     },
+    {
+      'title': 'Catat Pengeluaran',
+      'message': 'Selalu catat setiap pengeluaran agar tahu ke mana uangmu pergi.',
+      'image': 'assets/images/notes.png',
+    },
+    {
+      'title': 'Bandingkan Harga',
+      'message': 'Sebelum membeli, bandingkan harga di beberapa tempat.',
+      'image': 'assets/images/compare.png',
+    },
+    {
+      'title': 'Bawa Bekal Sendiri',
+      'message': 'Membawa bekal dari rumah bisa menghemat pengeluaran jajan.',
+      'image': 'assets/images/lunchbox.png',
+    },
+    {
+      'title': 'Jangan Mudah Tergoda Diskon',
+      'message': 'Beli barang karena butuh, bukan karena diskon.',
+      'image': 'assets/images/discount.png',
+    },
+    {
+      'title': 'Tentukan Tujuan Menabung',
+      'message': 'Menabung dengan tujuan membuatmu lebih semangat.',
+      'image': 'assets/images/goal.png',
+    },
+    {
+      'title': 'Gunakan Uang Secukupnya',
+      'message': 'Belanjakan uang sesuai kebutuhan, bukan keinginan.',
+      'image': 'assets/images/wallet.png',
+    },
+    {
+      'title': 'Jangan Lupa Berbagi',
+      'message': 'Sisihkan sebagian uang untuk membantu sesama.',
+      'image': 'assets/images/share.png',
+    },
   ];
+
+  // Quiz & tips state
+  int _quizIndex = 0;
+  int _score = 0;
+  bool _showResult = false;
+  late List<Map<String, dynamic>> _quizQuestions;
+  late List<Map<String, String>> _dailyTips;
 
   // Carousel state
   late final PageController _pageController;
   int _currentTip = 0;
   Timer? _tipTimer;
 
+  // Daftar berita & video edukasi dari internet
+  final List<Map<String, String>> _eduLinks = [
+    {
+      'title': '5 Cara Sederhana Mengatur Uang Saku',
+      'subtitle': 'kumparan.com',
+      'url': 'https://kumparan.com/berita-hari-ini/5-cara-sederhana-mengatur-uang-saku-1vQw1vQw1vQw',
+      'icon': 'article',
+    },
+    {
+      'title': 'Tips Mengelola Uang Jajan - YouTube',
+      'subtitle': 'YouTube: Finansialku.com',
+      'url': 'https://www.youtube.com/watch?v=6b4gQyKqk2w',
+      'icon': 'video',
+    },
+    {
+      'title': 'Kenali Pentingnya Menabung Sejak Dini',
+      'subtitle': 'detik.com',
+      'url': 'https://finance.detik.com/perencanaan-keuangan/d-6561047/kenali-pentingnya-menabung-sejak-dini',
+      'icon': 'article',
+    },
+    {
+      'title': 'Cara Mengatur Keuangan untuk Pelajar',
+      'subtitle': 'YouTube: Zenius',
+      'url': 'https://www.youtube.com/watch?v=5wQF6QyJv9g',
+      'icon': 'video',
+    },
+    {
+      'title': 'Tips Menabung Efektif untuk Remaja',
+      'subtitle': 'kompas.com',
+      'url': 'https://www.kompas.com/edu/read/2021/10/25/180000171/tips-menabung-efektif-untuk-remaja',
+      'icon': 'article',
+    },
+    {
+      'title': 'Cara Sederhana Mengelola Keuangan Pribadi',
+      'subtitle': 'cnbcindonesia.com',
+      'url': 'https://www.cnbcindonesia.com/your-money/20220118100019-78-308799/5-cara-sederhana-mengelola-keuangan-pribadi',
+      'icon': 'article',
+    },
+    {
+      'title': 'Belajar Keuangan untuk Anak Muda',
+      'subtitle': 'YouTube: Finansialku.com',
+      'url': 'https://www.youtube.com/watch?v=QwQwQwQwQwQ',
+      'icon': 'video',
+    },
+  ];
+
   @override
   void initState() {
     super.initState();
+    _randomizeQuizAndTips();
     _pageController = PageController(initialPage: _currentTip);
     _startTipTimer();
+  }
+
+  void _randomizeQuizAndTips() {
+    final rand = Random();
+    // Ambil 5 soal random unik
+    final quizBankCopy = List<Map<String, dynamic>>.from(_quizBank);
+    quizBankCopy.shuffle(rand);
+    _quizQuestions = quizBankCopy.take(5).toList();
+
+    // Ambil 3 tips random unik
+    final tipsBankCopy = List<Map<String, String>>.from(_tipsBank);
+    tipsBankCopy.shuffle(rand);
+    _dailyTips = tipsBankCopy.take(3).toList();
+
+    _quizIndex = 0;
+    _score = 0;
+    _showResult = false;
+    _currentTip = 0;
   }
 
   void _startTipTimer() {
@@ -122,9 +292,7 @@ class _TipsScreenState extends State<TipsScreen> {
 
   void _resetQuiz() {
     setState(() {
-      _quizIndex = 0;
-      _score = 0;
-      _showResult = false;
+      _randomizeQuizAndTips();
     });
   }
 
@@ -132,7 +300,7 @@ class _TipsScreenState extends State<TipsScreen> {
   Widget build(BuildContext context) {
     return SingleChildScrollView(
       child: Padding(
-        padding: const EdgeInsets.only(bottom: 24), // beri padding bawah agar tidak mentok
+        padding: const EdgeInsets.only(bottom: 24),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -215,7 +383,7 @@ class _TipsScreenState extends State<TipsScreen> {
                             const SizedBox(height: 12),
                             ElevatedButton(
                               onPressed: _resetQuiz,
-                              child: const Text('Ulangi Kuis'),
+                              child: const Text('Ulangi Kuis (Soal & Tips Baru)'),
                             ),
                           ],
                         )
@@ -235,68 +403,27 @@ class _TipsScreenState extends State<TipsScreen> {
                     style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
                   ),
                   const SizedBox(height: 12),
-                  Card(
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                    child: ListTile(
-                      leading: const Icon(Icons.article, color: Colors.blue),
-                      title: const Text('5 Cara Sederhana Mengatur Uang Saku'),
-                      subtitle: const Text('kumparan.com'),
-                      onTap: () {
-                        // Ganti dengan url_launcher jika ingin membuka link
-                        // launchUrl(Uri.parse('https://kumparan.com/...'));
-                      },
-                      trailing: const Icon(Icons.open_in_new),
-                    ),
-                  ),
-                  Card(
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                    child: ListTile(
-                      leading: const Icon(Icons.play_circle_fill, color: Colors.red),
-                      title: const Text('Tips Mengelola Uang Jajan - YouTube'),
-                      subtitle: const Text('YouTube: Finansialku.com'),
-                      onTap: () {
-                        // launchUrl(Uri.parse('https://www.youtube.com/watch?v=6b4gQyKqk2w'));
-                      },
-                      trailing: const Icon(Icons.open_in_new),
-                    ),
-                  ),
-                  Card(
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                    child: ListTile(
-                      leading: const Icon(Icons.article, color: Colors.blue),
-                      title: const Text('Kenali Pentingnya Menabung Sejak Dini'),
-                      subtitle: const Text('detik.com'),
-                      onTap: () {
-                        // launchUrl(Uri.parse('https://finance.detik.com/perencanaan-keuangan/d-6561047/kenali-pentingnya-menabung-sejak-dini'));
-                      },
-                      trailing: const Icon(Icons.open_in_new),
-                    ),
-                  ),
-                  // Tambahan berita/video edukasi
-                  Card(
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                    child: ListTile(
-                      leading: const Icon(Icons.play_circle_fill, color: Colors.red),
-                      title: const Text('Cara Mengatur Keuangan untuk Pelajar'),
-                      subtitle: const Text('YouTube: Zenius'),
-                      onTap: () {
-                        // launchUrl(Uri.parse('https://www.youtube.com/watch?v=5wQF6QyJv9g'));
-                      },
-                      trailing: const Icon(Icons.open_in_new),
-                    ),
-                  ),
-                  Card(
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                    child: ListTile(
-                      leading: const Icon(Icons.article, color: Colors.blue),
-                      title: const Text('Tips Menabung Efektif untuk Remaja'),
-                      subtitle: const Text('kompas.com'),
-                      onTap: () {
-                        // launchUrl(Uri.parse('https://www.kompas.com/edu/read/2021/10/25/180000171/tips-menabung-efektif-untuk-remaja'));
-                      },
-                      trailing: const Icon(Icons.open_in_new),
-                    ),
-                  ),
+                  ..._eduLinks.map((item) => Card(
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                        child: ListTile(
+                          leading: item['icon'] == 'video'
+                              ? const Icon(Icons.play_circle_fill, color: Colors.red)
+                              : const Icon(Icons.article, color: Colors.blue),
+                          title: Text(item['title'] ?? ''),
+                          subtitle: Text(item['subtitle'] ?? ''),
+                          onTap: () async {
+                            final url = item['url'];
+                            if (url != null && await canLaunchUrl(Uri.parse(url))) {
+                              await launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication);
+                            } else {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(content: Text('Tidak dapat membuka link')),
+                              );
+                            }
+                          },
+                          trailing: const Icon(Icons.open_in_new),
+                        ),
+                      )),
                 ],
               ),
             ),
