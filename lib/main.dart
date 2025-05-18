@@ -102,15 +102,16 @@ class _MainAppState extends State<MainApp> {
         visualDensity: VisualDensity.adaptivePlatformDensity,
       ),
       themeMode: _themeMode,
-      home: username == null
-          ? AuthScreen(onLogin: (user) => setState(() => username = user))
-          : HomeScreen(
-              username: username!,
-              onLogout: () => setState(() => username = null),
-              onProfileChanged: _onProfileChanged,
-              themeMode: _themeMode,
-              onThemeChanged: _changeTheme,
-            ),
+      home:
+          username == null
+              ? AuthScreen(onLogin: (user) => setState(() => username = user))
+              : HomeScreen(
+                username: username!,
+                onLogout: () => setState(() => username = null),
+                onProfileChanged: _onProfileChanged,
+                themeMode: _themeMode,
+                onThemeChanged: _changeTheme,
+              ),
     );
   }
 }
@@ -160,37 +161,39 @@ class _HomeScreenState extends State<HomeScreen> {
     final box = await Hive.openBox('budgets');
     await showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Atur Budget Bulanan'),
-        content: TextField(
-          controller: controller,
-          keyboardType: TextInputType.number,
-          decoration: const InputDecoration(
-            labelText: 'Budget (Rp)',
-            prefixText: 'Rp ',
+      builder:
+          (context) => AlertDialog(
+            title: const Text('Atur Budget Bulanan'),
+            content: TextField(
+              controller: controller,
+              keyboardType: TextInputType.number,
+              decoration: const InputDecoration(
+                labelText: 'Budget (Rp)',
+                prefixText: 'Rp ',
+              ),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text('Batal'),
+              ),
+              ElevatedButton(
+                onPressed: () {
+                  final value = double.tryParse(controller.text);
+                  final key =
+                      "${widget.username}_${selectedDate.year}_${selectedDate.month}";
+                  if (value != null && value > 0) {
+                    box.put(key, value);
+                    setState(() {
+                      currentBudget = value;
+                    });
+                  }
+                  Navigator.pop(context);
+                },
+                child: const Text('Simpan'),
+              ),
+            ],
           ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Batal'),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              final value = double.tryParse(controller.text);
-              final key = "${widget.username}_${selectedDate.year}_${selectedDate.month}";
-              if (value != null && value > 0) {
-                box.put(key, value);
-                setState(() {
-                  currentBudget = value;
-                });
-              }
-              Navigator.pop(context);
-            },
-            child: const Text('Simpan'),
-          ),
-        ],
-      ),
     );
   }
 
@@ -268,8 +271,19 @@ class _HomeScreenState extends State<HomeScreen> {
 
   String _monthName(int month) {
     const months = [
-      '', 'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni',
-      'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'
+      '',
+      'Januari',
+      'Februari',
+      'Maret',
+      'April',
+      'Mei',
+      'Juni',
+      'Juli',
+      'Agustus',
+      'September',
+      'Oktober',
+      'November',
+      'Desember',
     ];
     return months[month];
   }
@@ -321,7 +335,10 @@ class _HomeScreenState extends State<HomeScreen> {
         items: const [
           BottomNavigationBarItem(icon: Icon(Icons.pie_chart), label: 'chart'),
           BottomNavigationBarItem(icon: Icon(Icons.list_alt), label: 'records'),
-          BottomNavigationBarItem(icon: Icon(Icons.add_circle_outline), label: 'add'),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.add_circle_outline),
+            label: 'add',
+          ),
           BottomNavigationBarItem(icon: Icon(Icons.lightbulb), label: 'tips'),
           BottomNavigationBarItem(icon: Icon(Icons.more_horiz), label: 'other'),
         ],
