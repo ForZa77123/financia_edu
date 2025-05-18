@@ -3,7 +3,7 @@ import 'package:hive/hive.dart';
 
 import '../models/record.dart';
 
-class RecordsScreen extends StatelessWidget {
+class RecordsScreen extends StatefulWidget {
   final String email;
   final DateTime selectedDate;
   final Future<void> Function()? onPickMonth;
@@ -19,14 +19,163 @@ class RecordsScreen extends StatelessWidget {
   });
 
   @override
+  State<RecordsScreen> createState() => _RecordsScreenState();
+}
+
+class _RecordsScreenState extends State<RecordsScreen> {
+  Future<void> _showEditRecordDialog(BuildContext context, Record record, int recordIndex, List<Record> allRecords, String email) async {
+    final colorScheme = Theme.of(context).colorScheme;
+    final isExpense = record.type == 'expense';
+    final List<Map<String, dynamic>> expenseCategories = [
+      {'name': 'shopping', 'icon': Icons.shopping_bag},
+      {'name': 'food', 'icon': Icons.restaurant},
+      {'name': 'phone', 'icon': Icons.phone_android},
+      {'name': 'entertainment', 'icon': Icons.movie},
+      {'name': 'education', 'icon': Icons.school},
+      {'name': 'beauty', 'icon': Icons.brush},
+      {'name': 'sports', 'icon': Icons.sports_soccer},
+      {'name': 'social', 'icon': Icons.people},
+      {'name': 'transportation', 'icon': Icons.directions_bus},
+      {'name': 'clothing', 'icon': Icons.checkroom},
+      {'name': 'car', 'icon': Icons.directions_car},
+      {'name': 'electronics', 'icon': Icons.devices},
+      {'name': 'travel', 'icon': Icons.flight},
+      {'name': 'health', 'icon': Icons.local_hospital},
+      {'name': 'housing', 'icon': Icons.home},
+      {'name': 'more', 'icon': Icons.more_horiz},
+    ];
+    final List<Map<String, dynamic>> incomeCategories = [
+      {'name': 'salary', 'icon': Icons.attach_money},
+      {'name': 'investments', 'icon': Icons.trending_up},
+      {'name': 'part-time', 'icon': Icons.work_outline},
+      {'name': 'bonus', 'icon': Icons.card_giftcard},
+      {'name': 'others', 'icon': Icons.more_horiz},
+    ];
+    final categories = isExpense ? expenseCategories : incomeCategories;
+
+    String selectedCategory = record.category;
+    int amount = record.amount;
+    DateTime selectedDate = record.date;
+    final TextEditingController amountController = TextEditingController(text: amount.toString());
+
+    await showDialog(
+      context: context,
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setDialogState) {
+            return AlertDialog(
+              title: Text('Edit ${isExpense ? "Expense" : "Income"}'),
+              content: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    // Category picker
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
+                      children: categories.map((cat) {
+                        final isSelected = selectedCategory == cat['name'];
+                        return ChoiceChip(
+                          label: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(cat['icon'], size: 18, color: isSelected ? colorScheme.primary : null),
+                              const SizedBox(width: 4),
+                              Text(cat['name']),
+                            ],
+                          ),
+                          selected: isSelected,
+                          onSelected: (_) {
+                            setDialogState(() => selectedCategory = cat['name']);
+                          },
+                        );
+                      }).toList(),
+                    ),
+                    const SizedBox(height: 16),
+                    // Amount input
+                    TextField(
+                      controller: amountController,
+                      keyboardType: TextInputType.number,
+                      decoration: const InputDecoration(
+                        labelText: 'Jumlah',
+                        prefixText: 'Rp ',
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    // Date picker
+                    Row(
+                      children: [
+                        const Icon(Icons.calendar_today, size: 18),
+                        const SizedBox(width: 8),
+                        TextButton(
+                          onPressed: () async {
+                            final picked = await showDatePicker(
+                              context: context,
+                              initialDate: selectedDate,
+                              firstDate: DateTime(2000),
+                              lastDate: DateTime.now(),
+                            );
+                            if (picked != null) {
+                              setDialogState(() => selectedDate = picked);
+                            }
+                          },
+                          child: Text(
+                            "${selectedDate.day.toString().padLeft(2, '0')}-${selectedDate.month.toString().padLeft(2, '0')}-${selectedDate.year}",
+                            style: const TextStyle(fontWeight: FontWeight.bold),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: const Text('Batal'),
+                ),
+                ElevatedButton(
+                  onPressed: () async {
+                    final newAmount = int.tryParse(amountController.text) ?? 0;
+                    if (newAmount <= 0) return;
+                    // Update record in Hive
+                    final box = Hive.box('records');
+                    final List recordsList = box.get(email, defaultValue: <Map>[]) as List;
+                    // Cari index record asli di list (karena urutan di UI dibalik)
+                    int realIndex = recordsList.length - 1 - recordIndex;
+                    if (realIndex >= 0 && realIndex < recordsList.length) {
+                      recordsList[realIndex] = {
+                        'email': email,
+                        'type': record.type,
+                        'category': selectedCategory,
+                        'amount': newAmount,
+                        'date': selectedDate.toIso8601String(),
+                      };
+                      await box.put(email, recordsList);
+                    }
+                    Navigator.pop(context);
+                    // Refresh tampilan setelah edit
+                    if (mounted) setState(() {});
+                  },
+                  child: const Text('Simpan'),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+  }
+
+  @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final box = Hive.box('records');
-    final List records = box.get(email, defaultValue: <Map>[]) as List;
+    final List records = box.get(widget.email, defaultValue: <Map>[]) as List;
     final List<Record> userRecords = records.map((e) => Record.fromMap(Map<String, dynamic>.from(e))).toList();
     final List<Record> filteredRecords = userRecords.where((r) =>
-      r.date.month == selectedDate.month && r.date.year == selectedDate.year
+      r.date.month == widget.selectedDate.month && r.date.year == widget.selectedDate.year
     ).toList();
 
     // Hitung income, expense, balance
@@ -36,7 +185,7 @@ class RecordsScreen extends StatelessWidget {
 
     // Notifikasi jika expense > budget
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (budget != null && totalExpense > budget!) {
+      if (widget.budget != null && totalExpense > widget.budget!) {
         ScaffoldMessenger.of(context).removeCurrentSnackBar();
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -54,18 +203,18 @@ class RecordsScreen extends StatelessWidget {
         backgroundColor: Colors.transparent,
         elevation: 0,
         title: Text(
-          "${_monthName(selectedDate.month)} ${selectedDate.year}",
+          "${_monthName(widget.selectedDate.month)} ${widget.selectedDate.year}",
           style: const TextStyle(fontWeight: FontWeight.bold),
         ),
         actions: [
           IconButton(
             icon: const Icon(Icons.calendar_today),
-            onPressed: onPickMonth,
+            onPressed: widget.onPickMonth,
             tooltip: "Pilih Bulan",
           ),
           IconButton(
             icon: const Icon(Icons.account_balance_wallet),
-            onPressed: onSetBudget,
+            onPressed: widget.onSetBudget,
             tooltip: "Atur Budget",
           ),
         ],
@@ -138,24 +287,24 @@ class RecordsScreen extends StatelessWidget {
                             TableRow(
                               children: [
                                 Text(
-                                  budget != null
+                                  widget.budget != null
                                     ? "Budget:"
                                     : "Budget:",
                                   style: TextStyle(
                                     fontWeight: FontWeight.bold,
-                                    color: budget != null
-                                        ? (totalExpense > budget! ? Colors.red : Colors.green)
+                                    color: widget.budget != null
+                                        ? (totalExpense > widget.budget! ? Colors.red : Colors.green)
                                         : Colors.grey,
                                   ),
                                 ),
                                 Text(
-                                  budget != null
-                                    ? "Rp ${budget!.toStringAsFixed(0)}"
+                                  widget.budget != null
+                                    ? "Rp ${widget.budget!.toStringAsFixed(0)}"
                                     : "-",
                                   style: TextStyle(
                                     fontWeight: FontWeight.bold,
-                                    color: budget != null
-                                        ? (totalExpense > budget! ? Colors.red : Colors.green)
+                                    color: widget.budget != null
+                                        ? (totalExpense > widget.budget! ? Colors.red : Colors.green)
                                         : Colors.grey,
                                   ),
                                   textAlign: TextAlign.right,
@@ -164,11 +313,11 @@ class RecordsScreen extends StatelessWidget {
                             ),
                           ],
                         ),
-                        if (onSetBudget != null)
+                        if (widget.onSetBudget != null)
                           Align(
                             alignment: Alignment.centerRight,
                             child: TextButton.icon(
-                              onPressed: onSetBudget,
+                              onPressed: widget.onSetBudget,
                               icon: const Icon(Icons.edit, size: 16),
                               label: const Text("Atur Budget"),
                             ),
@@ -221,6 +370,10 @@ class RecordsScreen extends StatelessWidget {
                                 ),
                               ),
                               onTap: () {/* Show detail if needed */},
+                              onLongPress: () async {
+                                await _showEditRecordDialog(context, record, index, filteredRecords, widget.email);
+                                setState(() {}); // Refresh setelah edit
+                              },
                             ),
                           );
                         },
