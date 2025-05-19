@@ -1,24 +1,21 @@
 import 'package:flutter/material.dart';
 import 'package:fl_chart/fl_chart.dart';
-import 'package:hive/hive.dart';
 import 'package:intl/intl.dart';
 import '../models/record.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import '../firestore_service.dart';
 
 // Tambahkan parameter username
 class ChartScreen extends StatefulWidget {
   final String email;
   final DateTime selectedDate;
   final Future<void> Function()? onPickMonth;
-  final double? budget;
-  final Future<void> Function()? onSetBudget;
   const ChartScreen({
     super.key,
     required this.email,
     required this.selectedDate,
     this.onPickMonth,
-    this.budget,
-    this.onSetBudget,
   });
 
   @override
@@ -26,8 +23,54 @@ class ChartScreen extends StatefulWidget {
 }
 
 class _ChartScreenState extends State<ChartScreen> {
+  List<Record> _records = [];
+  bool _loading = true;
+  double? _budget;
   int _currentPage = 0;
   final PageController _pageController = PageController();
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchChartData();
+  }
+
+  Future<void> _fetchChartData() async {
+    final uid = FirebaseAuth.instance.currentUser?.uid;
+    if (uid != null) {
+      final records = await FirestoreService().getRecordsForUser(
+        uid,
+        month: widget.selectedDate,
+      );
+      final budget = await FirestoreService().getBudgetForMonth(
+        uid,
+        widget.selectedDate,
+      );
+      setState(() {
+        _records = records;
+        _budget = budget;
+        _loading = false;
+      });
+
+      // Show warning if needed
+      int totalExpense = _records
+          .where((r) => r.type == 'expense')
+          .fold(0, (sum, r) => sum + r.amount);
+      if (budget != null && totalExpense > budget) {
+        // ignore: use_build_context_synchronously
+        ScaffoldMessenger.of(context).removeCurrentSnackBar();
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: const Text(
+              'Peringatan: Pengeluaran sudah melebihi budget!',
+            ),
+            backgroundColor: Colors.red,
+            duration: const Duration(seconds: 3),
+          ),
+        );
+      }
+    }
+  }
 
   List<PieChartSectionData> _buildPieSections(List<Record> records) {
     final Map<String, double> categoryTotals = {};
@@ -123,13 +166,7 @@ class _ChartScreenState extends State<ChartScreen> {
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final box = Hive.box('records');
-    final List records = box.get(widget.email, defaultValue: <Map>[]) as List;
-    final List<Record> userRecords =
-        records
-            .map((e) => Record.fromMap(Map<String, dynamic>.from(e)))
-            .toList();
-    final List<Record> filteredRecords = _filterByMonth(userRecords);
+    final filteredRecords = _filterByMonth(_records);
 
     int totalIncome = filteredRecords
         .where((r) => r.type == 'income')
@@ -137,22 +174,6 @@ class _ChartScreenState extends State<ChartScreen> {
     int totalExpense = filteredRecords
         .where((r) => r.type == 'expense')
         .fold(0, (sum, r) => sum + r.amount);
-
-    // Notifikasi jika expense > budget
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (widget.budget != null && totalExpense > widget.budget!) {
-        ScaffoldMessenger.of(context).removeCurrentSnackBar();
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: const Text(
-              'Peringatan: Pengeluaran sudah melebihi budget!',
-            ),
-            backgroundColor: Colors.red,
-            duration: const Duration(seconds: 3),
-          ),
-        );
-      }
-    });
 
     final pieSections = _buildPieSections(filteredRecords);
     final lineSpots = _buildLineSpots(filteredRecords);
@@ -175,7 +196,7 @@ class _ChartScreenState extends State<ChartScreen> {
           ),
           IconButton(
             icon: const Icon(Icons.account_balance_wallet),
-            onPressed: widget.onSetBudget,
+            onPressed: _showSetBudgetDialog,
             tooltip: "Atur Budget",
           ),
         ],
@@ -543,6 +564,72 @@ class _ChartScreenState extends State<ChartScreen> {
         ],
       ),
     );
+  }
+
+  @override
+  void didUpdateWidget(covariant ChartScreen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.selectedDate != oldWidget.selectedDate) {
+      _fetchChartData();
+    }
+  }
+
+  void _showSetBudgetDialog() async {
+    final uid = FirebaseAuth.instance.currentUser?.uid;
+    final controller = TextEditingController(text: _budget?.toString() ?? '');
+    final result = await showDialog<double>(
+      context: context,
+      builder:
+          (context) => AlertDialog(
+            title: const Text('Atur Budget Bulanan'),
+            content: TextField(
+              controller: controller,
+              keyboardType: TextInputType.number,
+              decoration: const InputDecoration(labelText: 'Budget (Rp)'),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text('Batal'),
+              ),
+              ElevatedButton(
+                onPressed: () {
+                  final value = double.tryParse(controller.text);
+                  Navigator.pop(context, value);
+                },
+                child: const Text('Simpan'),
+              ),
+            ],
+          ),
+    );
+    if (uid != null && result != null) {
+      await FirestoreService().setBudgetForMonth(
+        uid,
+        widget.selectedDate,
+        result,
+      );
+      setState(() {
+        _budget = result;
+      });
+
+      // Check if the new budget is exceeded and show warning if needed
+      int totalExpense = _records
+          .where((r) => r.type == 'expense')
+          .fold(0, (sum, r) => sum + r.amount);
+      if (result != null && totalExpense > result) {
+        // ignore: use_build_context_synchronously
+        ScaffoldMessenger.of(context).removeCurrentSnackBar();
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: const Text(
+              'Peringatan: Pengeluaran sudah melebihi budget!',
+            ),
+            backgroundColor: Colors.red,
+            duration: const Duration(seconds: 3),
+          ),
+        );
+      }
+    }
   }
 
   String _monthName(int month) {

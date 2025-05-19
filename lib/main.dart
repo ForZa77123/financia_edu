@@ -65,8 +65,10 @@ class _MainAppState extends State<MainApp> {
   void _changeTheme(ThemeMode mode) async {
     final prefs = Hive.box('prefs');
     String themeStr = 'light';
-    if (mode == ThemeMode.dark) themeStr = 'dark';
-    else if (mode == ThemeMode.system) themeStr = 'system';
+    if (mode == ThemeMode.dark)
+      themeStr = 'dark';
+    else if (mode == ThemeMode.system)
+      themeStr = 'system';
     await prefs.put('themeMode', themeStr);
     setState(() {
       _themeMode = mode;
@@ -361,22 +363,16 @@ class _HomeScreenState extends State<HomeScreen> {
         email: widget.email,
         selectedDate: selectedDate,
         onPickMonth: _pickMonth,
-        budget: currentBudget,
-        onSetBudget: _setBudgetDialog,
       ),
       RecordsScreen(
         email: widget.email,
         selectedDate: selectedDate,
         onPickMonth: _pickMonth,
-        budget: currentBudget,
-        onSetBudget: _setBudgetDialog,
       ),
       AddScreen(
         email: widget.email,
         selectedDate: selectedDate,
         onPickMonth: _pickMonth,
-        budget: currentBudget,
-        onSetBudget: _setBudgetDialog,
       ),
       const TipsScreen(),
       SettingsScreen(
@@ -386,9 +382,7 @@ class _HomeScreenState extends State<HomeScreen> {
         onProfileChanged: (newUsername) {
           widget.onProfileChanged(newUsername);
         },
-        onSetBudget: _setBudgetDialog,
         selectedDate: selectedDate,
-        budget: currentBudget,
         themeMode: widget.themeMode,
         onThemeChanged: widget.onThemeChanged,
       ),
@@ -407,7 +401,10 @@ class _HomeScreenState extends State<HomeScreen> {
             label: 'add',
           ),
           BottomNavigationBarItem(icon: Icon(Icons.lightbulb), label: 'tips'),
-          BottomNavigationBarItem(icon: Icon(Icons.settings), label: 'settings'),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.settings),
+            label: 'settings',
+          ),
         ],
       ),
     );

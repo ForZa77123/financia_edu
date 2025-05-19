@@ -26,6 +26,7 @@ class RecordsScreen extends StatefulWidget {
 class _RecordsScreenState extends State<RecordsScreen> {
   List<Record> _records = [];
   bool _loading = true;
+  double? _budget;
 
   @override
   void initState() {
@@ -40,10 +41,34 @@ class _RecordsScreenState extends State<RecordsScreen> {
         uid,
         month: widget.selectedDate,
       );
+      final budget = await FirestoreService().getBudgetForMonth(
+        uid,
+        widget.selectedDate,
+      );
+      int totalExpense = records
+          .where((r) => r.type == 'expense')
+          .fold(0, (sum, r) => sum + r.amount);
+
       setState(() {
         _records = records;
+        _budget = budget;
         _loading = false;
       });
+
+      // Show warning only if this month's expense exceeds budget
+      if (budget != null && totalExpense > budget) {
+        // ignore: use_build_context_synchronously
+        ScaffoldMessenger.of(context).removeCurrentSnackBar();
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: const Text(
+              'Peringatan: Pengeluaran sudah melebihi budget!',
+            ),
+            backgroundColor: Colors.red,
+            duration: const Duration(seconds: 3),
+          ),
+        );
+      }
     }
   }
 
@@ -244,22 +269,6 @@ class _RecordsScreenState extends State<RecordsScreen> {
         .fold(0, (sum, r) => sum + r.amount);
     int balance = totalIncome - totalExpense;
 
-    // Notifikasi jika expense > budget
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (widget.budget != null && totalExpense > widget.budget!) {
-        ScaffoldMessenger.of(context).removeCurrentSnackBar();
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: const Text(
-              'Peringatan: Pengeluaran sudah melebihi budget!',
-            ),
-            backgroundColor: Colors.red,
-            duration: const Duration(seconds: 3),
-          ),
-        );
-      }
-    });
-
     return Scaffold(
       extendBodyBehindAppBar: true,
       appBar: AppBar(
@@ -277,7 +286,7 @@ class _RecordsScreenState extends State<RecordsScreen> {
           ),
           IconButton(
             icon: const Icon(Icons.account_balance_wallet),
-            onPressed: widget.onSetBudget,
+            onPressed: _showSetBudgetDialog,
             tooltip: "Atur Budget",
           ),
         ],
@@ -385,30 +394,28 @@ class _RecordsScreenState extends State<RecordsScreen> {
                                     TableRow(
                                       children: [
                                         Text(
-                                          widget.budget != null
+                                          _budget != null
                                               ? "Budget:"
                                               : "Budget:",
                                           style: TextStyle(
                                             fontWeight: FontWeight.bold,
                                             color:
-                                                widget.budget != null
-                                                    ? (totalExpense >
-                                                            widget.budget!
+                                                _budget != null
+                                                    ? (totalExpense > _budget!
                                                         ? Colors.red
                                                         : Colors.green)
                                                     : Colors.grey,
                                           ),
                                         ),
                                         Text(
-                                          widget.budget != null
-                                              ? "Rp ${widget.budget!.toStringAsFixed(0)}"
+                                          _budget != null
+                                              ? "Rp ${_budget!.toStringAsFixed(0)}"
                                               : "-",
                                           style: TextStyle(
                                             fontWeight: FontWeight.bold,
                                             color:
-                                                widget.budget != null
-                                                    ? (totalExpense >
-                                                            widget.budget!
+                                                _budget != null
+                                                    ? (totalExpense > _budget!
                                                         ? Colors.red
                                                         : Colors.green)
                                                     : Colors.grey,
@@ -419,15 +426,14 @@ class _RecordsScreenState extends State<RecordsScreen> {
                                     ),
                                   ],
                                 ),
-                                if (widget.onSetBudget != null)
-                                  Align(
-                                    alignment: Alignment.centerRight,
-                                    child: TextButton.icon(
-                                      onPressed: widget.onSetBudget,
-                                      icon: const Icon(Icons.edit, size: 16),
-                                      label: const Text("Atur Budget"),
-                                    ),
+                                Align(
+                                  alignment: Alignment.centerRight,
+                                  child: TextButton.icon(
+                                    onPressed: _showSetBudgetDialog,
+                                    icon: const Icon(Icons.edit, size: 16),
+                                    label: const Text("Atur Budget"),
                                   ),
+                                ),
                               ],
                             ),
                           ),
@@ -531,6 +537,64 @@ class _RecordsScreenState extends State<RecordsScreen> {
                 ],
               ),
     );
+  }
+
+  void _showSetBudgetDialog() async {
+    final uid = FirebaseAuth.instance.currentUser?.uid;
+    final controller = TextEditingController(text: _budget?.toString() ?? '');
+    final result = await showDialog<double>(
+      context: context,
+      builder:
+          (context) => AlertDialog(
+            title: const Text('Atur Budget Bulanan'),
+            content: TextField(
+              controller: controller,
+              keyboardType: TextInputType.number,
+              decoration: const InputDecoration(labelText: 'Budget (Rp)'),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text('Batal'),
+              ),
+              ElevatedButton(
+                onPressed: () {
+                  final value = double.tryParse(controller.text);
+                  Navigator.pop(context, value);
+                },
+                child: const Text('Simpan'),
+              ),
+            ],
+          ),
+    );
+    if (uid != null && result != null) {
+      await FirestoreService().setBudgetForMonth(
+        uid,
+        widget.selectedDate,
+        result,
+      );
+      setState(() {
+        _budget = result;
+      });
+
+      // Check if the new budget is exceeded and show warning if needed
+      int totalExpense = _records
+          .where((r) => r.type == 'expense')
+          .fold(0, (sum, r) => sum + r.amount);
+      if (result != null && totalExpense > result) {
+        // ignore: use_build_context_synchronously
+        ScaffoldMessenger.of(context).removeCurrentSnackBar();
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: const Text(
+              'Peringatan: Pengeluaran sudah melebihi budget!',
+            ),
+            backgroundColor: Colors.red,
+            duration: const Duration(seconds: 3),
+          ),
+        );
+      }
+    }
   }
 
   @override
