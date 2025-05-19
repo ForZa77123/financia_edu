@@ -1,1 +1,37 @@
-{"flutter":{"platforms":{"android":{"default":{"projectId":"finansia-edu-tubes-pam","appId":"1:868690393452:android:f289eb6d51d18462ae9b49","fileOutput":"android/app/google-services.json"}},"dart":{"lib/firebase_options.dart":{"projectId":"finansia-edu-tubes-pam","configurations":{"android":"1:868690393452:android:f289eb6d51d18462ae9b49"}}}}}}
+{
+  "flutter": {
+    "platforms": {
+      "android": {
+        "default": {
+          "projectId": "finansia-edu-tubes-pam",
+          "appId": "1:868690393452:android:f289eb6d51d18462ae9b49",
+          "fileOutput": "android/app/google-services.json"
+        }
+      },
+      "dart": {
+        "lib/firebase_options.dart": {
+          "projectId": "finansia-edu-tubes-pam",
+          "configurations": {
+            "android": "1:868690393452:android:f289eb6d51d18462ae9b49"
+          }
+        }
+      }
+    }
+  },
+  "functions": [
+    {
+      "source": "functions",
+      "codebase": "default",
+      "ignore": [
+        "node_modules",
+        ".git",
+        "firebase-debug.log",
+        "firebase-debug.*.log",
+        "*.local"
+      ],
+      "predeploy": [
+        "npm --prefix \"$RESOURCE_DIR\" run lint"
+      ]
+    }
+  ]
+}
