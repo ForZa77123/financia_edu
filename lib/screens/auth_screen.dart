@@ -15,7 +15,7 @@ class AuthScreen extends StatefulWidget {
 Future<String> getDeviceId() async {
   final deviceInfo = DeviceInfoPlugin();
   final androidInfo = await deviceInfo.androidInfo;
-  return androidInfo.id ?? "unknown";
+  return androidInfo.id;
 }
 
 class _AuthScreenState extends State<AuthScreen> {
@@ -25,9 +25,14 @@ class _AuthScreenState extends State<AuthScreen> {
   String? error;
   bool isReset = false; // Tambahkan state untuk reset password
 
-  Future<void> setDeviceVerified(bool value, {bool updateTime = false}) async {
+  Future<void> setDeviceVerified(
+    String uid,
+    bool value, {
+    bool updateTime = false,
+  }) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setBool('deviceVerified', value);
+    await prefs.setString('verifiedUid', uid);
     if (updateTime) {
       await prefs.setInt(
         'lastVerifiedMillis',
@@ -36,9 +41,10 @@ class _AuthScreenState extends State<AuthScreen> {
     }
   }
 
-  Future<bool> isDeviceVerified() async {
+  Future<bool> isDeviceVerified(String uid) async {
     final prefs = await SharedPreferences.getInstance();
-    return prefs.getBool('deviceVerified') ?? false;
+    final verifiedUid = prefs.getString('verifiedUid');
+    return prefs.getBool('deviceVerified') == true && verifiedUid == uid;
   }
 
   Future<bool> isVerificationExpired() async {
@@ -49,11 +55,11 @@ class _AuthScreenState extends State<AuthScreen> {
   }
 
   Future<void> logout() async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user != null) {
+      await setDeviceVerified(user.uid, true, updateTime: true);
+    }
     await FirebaseAuth.instance.signOut();
-    await setDeviceVerified(
-      true,
-      updateTime: true,
-    ); // Mark as verified, but set the time
   }
 
   void _submit() async {
@@ -78,15 +84,19 @@ class _AuthScreenState extends State<AuthScreen> {
             .signInWithEmailAndPassword(email: username, password: password);
         final user = userCredential.user;
 
-        final verified = await isDeviceVerified();
+        final verified =
+            user != null ? await isDeviceVerified(user.uid) : false;
         final expired = await isVerificationExpired();
 
         if (verified && expired) {
           // After 24h from logout, require verification again
-          await setDeviceVerified(false);
+          await setDeviceVerified(user.uid, false);
         }
 
-        final nowVerified = await isDeviceVerified();
+        bool nowVerified = false;
+        if (user != null) {
+          nowVerified = await isDeviceVerified(user.uid);
+        }
 
         if (!nowVerified) {
           if (user != null && !user.emailVerified) {
@@ -95,7 +105,7 @@ class _AuthScreenState extends State<AuthScreen> {
             await FirebaseAuth.instance.signOut();
             return;
           } else if (user != null && user.emailVerified) {
-            await setDeviceVerified(true);
+            await setDeviceVerified(user.uid, true);
           }
         }
 
