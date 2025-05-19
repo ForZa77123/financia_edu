@@ -42,4 +42,32 @@ class FirestoreService {
         .doc(recordId)
         .delete();
   }
+
+  // Set or update budget for a specific month
+  Future<void> setBudgetForMonth(
+    String uid,
+    DateTime month,
+    double amount,
+  ) async {
+    final docId = "${month.year}-${month.month.toString().padLeft(2, '0')}";
+    await _db.collection('users').doc(uid).collection('budgets').doc(docId).set(
+      {'amount': amount},
+    );
+  }
+
+  // Get budget for a specific month
+  Future<double?> getBudgetForMonth(String uid, DateTime month) async {
+    final docId = "${month.year}-${month.month.toString().padLeft(2, '0')}";
+    final doc =
+        await _db
+            .collection('users')
+            .doc(uid)
+            .collection('budgets')
+            .doc(docId)
+            .get();
+    if (doc.exists && doc.data() != null) {
+      return (doc.data()!['amount'] as num).toDouble();
+    }
+    return null;
+  }
 }
