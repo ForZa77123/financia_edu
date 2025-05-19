@@ -170,6 +170,27 @@ class _RecordsScreenState extends State<RecordsScreen> {
                 ),
               ),
               actions: [
+                // Tombol hapus record
+                TextButton(
+                  onPressed: () async {
+                    final uid = FirebaseAuth.instance.currentUser?.uid;
+                    if (uid != null && record.docId != null) {
+                      await FirebaseFirestore.instance
+                          .collection('users')
+                          .doc(uid)
+                          .collection('records')
+                          .doc(record.docId)
+                          .delete();
+                      Navigator.pop(context);
+                      await _fetchRecords(); // Refresh list setelah hapus
+                      if (mounted) setState(() {});
+                    }
+                  },
+                  style: TextButton.styleFrom(
+                    foregroundColor: Colors.red,
+                  ),
+                  child: const Text('Hapus'),
+                ),
                 TextButton(
                   onPressed: () => Navigator.pop(context),
                   child: const Text('Batal'),

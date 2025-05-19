@@ -176,45 +176,27 @@ class _TipsScreenState extends State<TipsScreen> {
   // Daftar berita & video edukasi dari internet
   final List<Map<String, String>> _eduLinks = [
     {
-      'title': '5 Cara Sederhana Mengatur Uang Saku',
-      'subtitle': 'kumparan.com',
-      'url': 'https://kumparan.com/berita-hari-ini/5-cara-sederhana-mengatur-uang-saku-1vQw1vQw1vQw',
-      'icon': 'article',
-    },
-    {
-      'title': 'Tips Mengelola Uang Jajan - YouTube',
-      'subtitle': 'YouTube: Finansialku.com',
-      'url': 'https://www.youtube.com/watch?v=6b4gQyKqk2w',
+      'title': '5 tips MENABUNG (no4 sering keskip...)',
+      'subtitle': 'YouTube: cclaracl',
+      'url': 'https://www.youtube.com/watch?v=JfjevexbVVI',
       'icon': 'video',
     },
     {
-      'title': 'Kenali Pentingnya Menabung Sejak Dini',
-      'subtitle': 'detik.com',
-      'url': 'https://finance.detik.com/perencanaan-keuangan/d-6561047/kenali-pentingnya-menabung-sejak-dini',
+      'title': 'Tips Menabung untuk Pelajar, Orangtua Harus Tahu!',
+      'subtitle': 'hokibank.co.id',
+      'url': 'https://hokibank.co.id/tips-menabung-untuk-pelajar-orangtua-harus-tahu/',
       'icon': 'article',
     },
     {
-      'title': 'Cara Mengatur Keuangan untuk Pelajar',
-      'subtitle': 'YouTube: Zenius',
-      'url': 'https://www.youtube.com/watch?v=5wQF6QyJv9g',
-      'icon': 'video',
-    },
-    {
-      'title': 'Tips Menabung Efektif untuk Remaja',
-      'subtitle': 'kompas.com',
-      'url': 'https://www.kompas.com/edu/read/2021/10/25/180000171/tips-menabung-efektif-untuk-remaja',
+      'title': '10 Tips Menabung untuk Pelajar agar Uang Cepat Terkumpul',
+      'subtitle': 'skorlife.com',
+      'url': 'https://skorlife.com/blog/gaya-hidup/tips-menabung-untuk-pelajar/',
       'icon': 'article',
     },
-    {
-      'title': 'Cara Sederhana Mengelola Keuangan Pribadi',
-      'subtitle': 'cnbcindonesia.com',
-      'url': 'https://www.cnbcindonesia.com/your-money/20220118100019-78-308799/5-cara-sederhana-mengelola-keuangan-pribadi',
-      'icon': 'article',
-    },
-    {
-      'title': 'Belajar Keuangan untuk Anak Muda',
-      'subtitle': 'YouTube: Finansialku.com',
-      'url': 'https://www.youtube.com/watch?v=QwQwQwQwQwQ',
+        {
+      'title': 'KESALAHAN KEUANGAN SETIAP USIA',
+      'subtitle': 'YouTube: Tentang Uang',
+      'url': 'https://www.youtube.com/watch?v=Mgy48XVWq5o',
       'icon': 'video',
     },
   ];

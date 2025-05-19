@@ -32,6 +32,7 @@ class SettingsScreen extends StatefulWidget {
 
 class _SettingsScreenState extends State<SettingsScreen> {
   String? profileImagePath;
+  bool _notifExpenseOn = false; // hanya untuk tampilan switch
 
   @override
   void initState() {
@@ -396,15 +397,21 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 shrinkWrap: true,
                 physics: const NeverScrollableScrollPhysics(),
                 children: [
+                  // Notifikasi dengan tap button (Switch)
                   ListTile(
                     leading: Icon(
                       Icons.notifications,
                       color: colorScheme.primary,
                     ),
                     title: const Text('Notifications'),
-                    trailing: Icon(
-                      Icons.chevron_right,
-                      color: colorScheme.primary,
+                    trailing: Switch(
+                      value: _notifExpenseOn,
+                      onChanged: (val) {
+                        setState(() {
+                          _notifExpenseOn = val;
+                        });
+                      },
+                      activeColor: colorScheme.primary,
                     ),
                   ),
                   ListTile(
@@ -415,14 +422,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       color: colorScheme.primary,
                     ),
                   ),
-                  ListTile(
-                    leading: Icon(Icons.language, color: colorScheme.primary),
-                    title: const Text('Language'),
-                    trailing: Icon(
-                      Icons.chevron_right,
-                      color: colorScheme.primary,
-                    ),
-                  ),
+
                   ListTile(
                     leading: Icon(Icons.color_lens, color: colorScheme.primary),
                     title: const Text('Theme'),
@@ -482,14 +482,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         await prefs.put('themeMode', themeStr);
                       }
                     },
-                  ),
-                  ListTile(
-                    leading: Icon(Icons.help, color: colorScheme.primary),
-                    title: const Text('Help & Support'),
-                    trailing: Icon(
-                      Icons.chevron_right,
-                      color: colorScheme.primary,
-                    ),
                   ),
                   ListTile(
                     leading: Icon(Icons.info, color: colorScheme.primary),

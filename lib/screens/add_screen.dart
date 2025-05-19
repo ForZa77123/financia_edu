@@ -96,25 +96,7 @@ class _AddScreenState extends State<AddScreen> {
             onPressed: widget.onSetBudget,
             tooltip: "Atur Budget",
           ),
-          IconButton(
-            onPressed: () {
-              showDialog(
-                context: context,
-                builder:
-                    (context) => AlertDialog(
-                      title: const Text('Info'),
-                      content: const Text('Pengaturan belum tersedia.'),
-                      actions: [
-                        TextButton(
-                          onPressed: () => Navigator.pop(context),
-                          child: const Text('OK'),
-                        ),
-                      ],
-                    ),
-              );
-            },
-            icon: const Icon(Icons.settings),
-          ),
+          
         ],
       ),
       body: Stack(

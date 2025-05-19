@@ -289,20 +289,7 @@ class _ChartScreenState extends State<ChartScreen> {
                               ),
                           ],
                         ),
-                        Container(
-                          padding: const EdgeInsets.symmetric(vertical: 8),
-                          width: double.infinity,
-                          color: Colors.white,
-                          child: Center(
-                            child: Text(
-                              '${_monthName(widget.selectedDate.month)} ${widget.selectedDate.year}',
-                              style: const TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                          ),
-                        ),
+                        
                       ],
                     ),
                   ),
