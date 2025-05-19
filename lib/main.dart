@@ -222,48 +222,48 @@ class _HomeScreenState extends State<HomeScreen> {
     });
   }
 
-  Future<void> _setBudgetDialog() async {
-    final TextEditingController controller = TextEditingController(
-      text: currentBudget != null ? currentBudget!.toStringAsFixed(0) : '',
-    );
-    final box = await Hive.openBox('budgets');
-    await showDialog(
-      context: context,
-      builder:
-          (context) => AlertDialog(
-            title: const Text('Atur Budget Bulanan'),
-            content: TextField(
-              controller: controller,
-              keyboardType: TextInputType.number,
-              decoration: const InputDecoration(
-                labelText: 'Budget (Rp)',
-                prefixText: 'Rp ',
-              ),
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(context),
-                child: const Text('Batal'),
-              ),
-              ElevatedButton(
-                onPressed: () {
-                  final value = double.tryParse(controller.text);
-                  final key =
-                      "${widget.email}_${selectedDate.year}_${selectedDate.month}";
-                  if (value != null && value > 0) {
-                    box.put(key, value);
-                    setState(() {
-                      currentBudget = value;
-                    });
-                  }
-                  Navigator.pop(context);
-                },
-                child: const Text('Simpan'),
-              ),
-            ],
-          ),
-    );
-  }
+  // Future<void> _setBudgetDialog() async {
+  //   final TextEditingController controller = TextEditingController(
+  //     text: currentBudget != null ? currentBudget!.toStringAsFixed(0) : '',
+  //   );
+  //   final box = await Hive.openBox('budgets');
+  //   await showDialog(
+  //     context: context,
+  //     builder:
+  //         (context) => AlertDialog(
+  //           title: const Text('Atur Budget Bulanan'),
+  //           content: TextField(
+  //             controller: controller,
+  //             keyboardType: TextInputType.number,
+  //             decoration: const InputDecoration(
+  //               labelText: 'Budget (Rp)',
+  //               prefixText: 'Rp ',
+  //             ),
+  //           ),
+  //           actions: [
+  //             TextButton(
+  //               onPressed: () => Navigator.pop(context),
+  //               child: const Text('Batal'),
+  //             ),
+  //             ElevatedButton(
+  //               onPressed: () {
+  //                 final value = double.tryParse(controller.text);
+  //                 final key =
+  //                     "${widget.email}_${selectedDate.year}_${selectedDate.month}";
+  //                 if (value != null && value > 0) {
+  //                   box.put(key, value);
+  //                   setState(() {
+  //                     currentBudget = value;
+  //                   });
+  //                 }
+  //                 Navigator.pop(context);
+  //               },
+  //               child: const Text('Simpan'),
+  //             ),
+  //           ],
+  //         ),
+  //   );
+  // }
 
   Future<void> _pickMonth() async {
     int selectedYear = selectedDate.year;

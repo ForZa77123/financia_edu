@@ -211,9 +211,7 @@ class _RecordsScreenState extends State<RecordsScreen> {
                       if (mounted) setState(() {});
                     }
                   },
-                  style: TextButton.styleFrom(
-                    foregroundColor: Colors.red,
-                  ),
+                  style: TextButton.styleFrom(foregroundColor: Colors.red),
                   child: const Text('Hapus'),
                 ),
                 TextButton(
@@ -581,7 +579,7 @@ class _RecordsScreenState extends State<RecordsScreen> {
       int totalExpense = _records
           .where((r) => r.type == 'expense')
           .fold(0, (sum, r) => sum + r.amount);
-      if (result != null && totalExpense > result) {
+      if (totalExpense > result) {
         // ignore: use_build_context_synchronously
         ScaffoldMessenger.of(context).removeCurrentSnackBar();
         ScaffoldMessenger.of(context).showSnackBar(

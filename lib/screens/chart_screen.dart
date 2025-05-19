@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:intl/intl.dart';
 import '../models/record.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../firestore_service.dart';
 
@@ -654,7 +653,7 @@ class _ChartScreenState extends State<ChartScreen> {
       int totalExpense = _records
           .where((r) => r.type == 'expense')
           .fold(0, (sum, r) => sum + r.amount);
-      if (result != null && totalExpense > result) {
+      if (totalExpense > result) {
         // ignore: use_build_context_synchronously
         ScaffoldMessenger.of(context).removeCurrentSnackBar();
         ScaffoldMessenger.of(context).showSnackBar(
