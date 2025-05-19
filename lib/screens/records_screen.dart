@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:hive/hive.dart';
-
+import '../firestore_service.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import '../models/record.dart';
 
 class RecordsScreen extends StatefulWidget {
@@ -23,7 +24,36 @@ class RecordsScreen extends StatefulWidget {
 }
 
 class _RecordsScreenState extends State<RecordsScreen> {
-  Future<void> _showEditRecordDialog(BuildContext context, Record record, int recordIndex, List<Record> allRecords, String email) async {
+  List<Record> _records = [];
+  bool _loading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchRecords();
+  }
+
+  Future<void> _fetchRecords() async {
+    final uid = FirebaseAuth.instance.currentUser?.uid;
+    if (uid != null) {
+      final records = await FirestoreService().getRecordsForUser(
+        uid,
+        month: widget.selectedDate,
+      );
+      setState(() {
+        _records = records;
+        _loading = false;
+      });
+    }
+  }
+
+  Future<void> _showEditRecordDialog(
+    BuildContext context,
+    Record record,
+    int recordIndex,
+    List<Record> allRecords,
+    String email,
+  ) async {
     final colorScheme = Theme.of(context).colorScheme;
     final isExpense = record.type == 'expense';
     final List<Map<String, dynamic>> expenseCategories = [
@@ -56,7 +86,9 @@ class _RecordsScreenState extends State<RecordsScreen> {
     String selectedCategory = record.category;
     int amount = record.amount;
     DateTime selectedDate = record.date;
-    final TextEditingController amountController = TextEditingController(text: amount.toString());
+    final TextEditingController amountController = TextEditingController(
+      text: amount.toString(),
+    );
 
     await showDialog(
       context: context,
@@ -73,23 +105,31 @@ class _RecordsScreenState extends State<RecordsScreen> {
                     Wrap(
                       spacing: 8,
                       runSpacing: 8,
-                      children: categories.map((cat) {
-                        final isSelected = selectedCategory == cat['name'];
-                        return ChoiceChip(
-                          label: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Icon(cat['icon'], size: 18, color: isSelected ? colorScheme.primary : null),
-                              const SizedBox(width: 4),
-                              Text(cat['name']),
-                            ],
-                          ),
-                          selected: isSelected,
-                          onSelected: (_) {
-                            setDialogState(() => selectedCategory = cat['name']);
-                          },
-                        );
-                      }).toList(),
+                      children:
+                          categories.map((cat) {
+                            final isSelected = selectedCategory == cat['name'];
+                            return ChoiceChip(
+                              label: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Icon(
+                                    cat['icon'],
+                                    size: 18,
+                                    color:
+                                        isSelected ? colorScheme.primary : null,
+                                  ),
+                                  const SizedBox(width: 4),
+                                  Text(cat['name']),
+                                ],
+                              ),
+                              selected: isSelected,
+                              onSelected: (_) {
+                                setDialogState(
+                                  () => selectedCategory = cat['name'],
+                                );
+                              },
+                            );
+                          }).toList(),
                     ),
                     const SizedBox(height: 16),
                     // Amount input
@@ -138,20 +178,21 @@ class _RecordsScreenState extends State<RecordsScreen> {
                   onPressed: () async {
                     final newAmount = int.tryParse(amountController.text) ?? 0;
                     if (newAmount <= 0) return;
-                    // Update record in Hive
-                    final box = Hive.box('records');
-                    final List recordsList = box.get(email, defaultValue: <Map>[]) as List;
-                    // Cari index record asli di list (karena urutan di UI dibalik)
-                    int realIndex = recordsList.length - 1 - recordIndex;
-                    if (realIndex >= 0 && realIndex < recordsList.length) {
-                      recordsList[realIndex] = {
-                        'email': email,
-                        'type': record.type,
-                        'category': selectedCategory,
-                        'amount': newAmount,
-                        'date': selectedDate.toIso8601String(),
-                      };
-                      await box.put(email, recordsList);
+                    // Update record in Firestore
+                    final uid = FirebaseAuth.instance.currentUser?.uid;
+                    if (uid != null && record.docId != null) {
+                      await FirebaseFirestore.instance
+                          .collection('users')
+                          .doc(uid)
+                          .collection('records')
+                          .doc(record.docId)
+                          .update({
+                            'category': selectedCategory,
+                            'amount': newAmount,
+                            'date': selectedDate.toIso8601String(),
+                          });
+                      Navigator.pop(context);
+                      await _fetchRecords(); // Refresh the list after editing
                     }
                     Navigator.pop(context);
                     // Refresh tampilan setelah edit
@@ -171,16 +212,15 @@ class _RecordsScreenState extends State<RecordsScreen> {
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final box = Hive.box('records');
-    final List records = box.get(widget.email, defaultValue: <Map>[]) as List;
-    final List<Record> userRecords = records.map((e) => Record.fromMap(Map<String, dynamic>.from(e))).toList();
-    final List<Record> filteredRecords = userRecords.where((r) =>
-      r.date.month == widget.selectedDate.month && r.date.year == widget.selectedDate.year
-    ).toList();
+    final List<Record> filteredRecords = _records;
 
     // Hitung income, expense, balance
-    int totalIncome = filteredRecords.where((r) => r.type == 'income').fold(0, (sum, r) => sum + r.amount);
-    int totalExpense = filteredRecords.where((r) => r.type == 'expense').fold(0, (sum, r) => sum + r.amount);
+    int totalIncome = filteredRecords
+        .where((r) => r.type == 'income')
+        .fold(0, (sum, r) => sum + r.amount);
+    int totalExpense = filteredRecords
+        .where((r) => r.type == 'expense')
+        .fold(0, (sum, r) => sum + r.amount);
     int balance = totalIncome - totalExpense;
 
     // Notifikasi jika expense > budget
@@ -189,7 +229,9 @@ class _RecordsScreenState extends State<RecordsScreen> {
         ScaffoldMessenger.of(context).removeCurrentSnackBar();
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: const Text('Peringatan: Pengeluaran sudah melebihi budget!'),
+            content: const Text(
+              'Peringatan: Pengeluaran sudah melebihi budget!',
+            ),
             backgroundColor: Colors.red,
             duration: const Duration(seconds: 3),
           ),
@@ -219,177 +261,280 @@ class _RecordsScreenState extends State<RecordsScreen> {
           ),
         ],
       ),
-      body: Stack(
-        children: [
-          // Background gradient sesuai tema
-          Container(
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                colors: isDark
-                    ? [
-                        const Color(0xFF23272F),
-                        const Color(0xFF181A20),
-                        const Color(0xFF23272F),
-                      ]
-                    : [
-                        const Color(0xFF1976D2),
-                        const Color(0xFF64B5F6),
-                        const Color(0xFFFFFDE4),
-                      ],
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-              ),
-            ),
-          ),
-          Column(
-            children: [
-              const SizedBox(height: kToolbarHeight + 16),
-              SizedBox(height: 24), // Tambahkan jarak ekstra di sini
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                child: Card(
-                  elevation: 6,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(20),
-                  ),
-                  color: isDark
-                      ? Colors.grey[900]?.withOpacity(0.93)
-                      : Colors.white.withOpacity(0.93),
-                  child: Padding(
-                    padding: const EdgeInsets.all(16),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: [
-                        Table(
-                          columnWidths: const {
-                            0: FlexColumnWidth(1.5),
-                            1: FlexColumnWidth(2),
-                          },
-                          children: [
-                            TableRow(
-                              children: [
-                                Text('Income:', style: TextStyle(color: colorScheme.secondary)),
-                                Text('Rp $totalIncome', style: TextStyle(color: colorScheme.secondary, fontWeight: FontWeight.bold), textAlign: TextAlign.right),
-                              ],
-                            ),
-                            TableRow(
-                              children: [
-                                Text('Expenses:', style: TextStyle(color: colorScheme.primary)),
-                                Text('Rp $totalExpense', style: TextStyle(color: colorScheme.primary, fontWeight: FontWeight.bold), textAlign: TextAlign.right),
-                              ],
-                            ),
-                            TableRow(
-                              children: [
-                                const Text('Balance:'),
-                                Text('Rp $balance', style: const TextStyle(fontWeight: FontWeight.bold), textAlign: TextAlign.right),
-                              ],
-                            ),
-                            TableRow(
-                              children: [
-                                Text(
-                                  widget.budget != null
-                                    ? "Budget:"
-                                    : "Budget:",
-                                  style: TextStyle(
-                                    fontWeight: FontWeight.bold,
-                                    color: widget.budget != null
-                                        ? (totalExpense > widget.budget! ? Colors.red : Colors.green)
-                                        : Colors.grey,
-                                  ),
-                                ),
-                                Text(
-                                  widget.budget != null
-                                    ? "Rp ${widget.budget!.toStringAsFixed(0)}"
-                                    : "-",
-                                  style: TextStyle(
-                                    fontWeight: FontWeight.bold,
-                                    color: widget.budget != null
-                                        ? (totalExpense > widget.budget! ? Colors.red : Colors.green)
-                                        : Colors.grey,
-                                  ),
-                                  textAlign: TextAlign.right,
-                                ),
-                              ],
-                            ),
-                          ],
-                        ),
-                        if (widget.onSetBudget != null)
-                          Align(
-                            alignment: Alignment.centerRight,
-                            child: TextButton.icon(
-                              onPressed: widget.onSetBudget,
-                              icon: const Icon(Icons.edit, size: 16),
-                              label: const Text("Atur Budget"),
-                            ),
-                          ),
-                      ],
+      body:
+          _loading
+              ? const Center(child: CircularProgressIndicator())
+              : Stack(
+                children: [
+                  // Background gradient sesuai tema
+                  Container(
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        colors:
+                            isDark
+                                ? [
+                                  const Color(0xFF23272F),
+                                  const Color(0xFF181A20),
+                                  const Color(0xFF23272F),
+                                ]
+                                : [
+                                  const Color(0xFF1976D2),
+                                  const Color(0xFF64B5F6),
+                                  const Color(0xFFFFFDE4),
+                                ],
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                      ),
                     ),
                   ),
-                ),
-              ),
-              Expanded(
-                child: filteredRecords.isEmpty
-                    ? const Center(child: Text('Belum ada catatan'))
-                    : ListView.builder(
-                        padding: const EdgeInsets.only(top: 8, left: 8, right: 8, bottom: 8),
-                        itemCount: filteredRecords.length,
-                        itemBuilder: (context, index) {
-                          final record = filteredRecords[filteredRecords.length - 1 - index];
-                          return Card(
-                            margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
-                            elevation: 3,
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                            color: isDark
-                                ? Colors.grey[900]?.withOpacity(0.96)
-                                : Colors.white.withOpacity(0.96),
-                            child: ListTile(
-                              leading: CircleAvatar(
-                                backgroundColor: record.type == 'income'
-                                    ? colorScheme.secondary.withOpacity(0.15)
-                                    : colorScheme.primary.withOpacity(0.15),
-                                child: Icon(
-                                  record.type == 'income' ? Icons.arrow_downward : Icons.arrow_upward,
-                                  color: record.type == 'income' ? colorScheme.secondary : colorScheme.primary,
+                  Column(
+                    children: [
+                      const SizedBox(height: kToolbarHeight + 16),
+                      SizedBox(height: 24), // Tambahkan jarak ekstra di sini
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 16),
+                        child: Card(
+                          elevation: 6,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(20),
+                          ),
+                          color:
+                              isDark
+                                  ? Colors.grey[900]?.withOpacity(0.93)
+                                  : Colors.white.withOpacity(0.93),
+                          child: Padding(
+                            padding: const EdgeInsets.all(16),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.stretch,
+                              children: [
+                                Table(
+                                  columnWidths: const {
+                                    0: FlexColumnWidth(1.5),
+                                    1: FlexColumnWidth(2),
+                                  },
+                                  children: [
+                                    TableRow(
+                                      children: [
+                                        Text(
+                                          'Income:',
+                                          style: TextStyle(
+                                            color: colorScheme.secondary,
+                                          ),
+                                        ),
+                                        Text(
+                                          'Rp $totalIncome',
+                                          style: TextStyle(
+                                            color: colorScheme.secondary,
+                                            fontWeight: FontWeight.bold,
+                                          ),
+                                          textAlign: TextAlign.right,
+                                        ),
+                                      ],
+                                    ),
+                                    TableRow(
+                                      children: [
+                                        Text(
+                                          'Expenses:',
+                                          style: TextStyle(
+                                            color: colorScheme.primary,
+                                          ),
+                                        ),
+                                        Text(
+                                          'Rp $totalExpense',
+                                          style: TextStyle(
+                                            color: colorScheme.primary,
+                                            fontWeight: FontWeight.bold,
+                                          ),
+                                          textAlign: TextAlign.right,
+                                        ),
+                                      ],
+                                    ),
+                                    TableRow(
+                                      children: [
+                                        const Text('Balance:'),
+                                        Text(
+                                          'Rp $balance',
+                                          style: const TextStyle(
+                                            fontWeight: FontWeight.bold,
+                                          ),
+                                          textAlign: TextAlign.right,
+                                        ),
+                                      ],
+                                    ),
+                                    TableRow(
+                                      children: [
+                                        Text(
+                                          widget.budget != null
+                                              ? "Budget:"
+                                              : "Budget:",
+                                          style: TextStyle(
+                                            fontWeight: FontWeight.bold,
+                                            color:
+                                                widget.budget != null
+                                                    ? (totalExpense >
+                                                            widget.budget!
+                                                        ? Colors.red
+                                                        : Colors.green)
+                                                    : Colors.grey,
+                                          ),
+                                        ),
+                                        Text(
+                                          widget.budget != null
+                                              ? "Rp ${widget.budget!.toStringAsFixed(0)}"
+                                              : "-",
+                                          style: TextStyle(
+                                            fontWeight: FontWeight.bold,
+                                            color:
+                                                widget.budget != null
+                                                    ? (totalExpense >
+                                                            widget.budget!
+                                                        ? Colors.red
+                                                        : Colors.green)
+                                                    : Colors.grey,
+                                          ),
+                                          textAlign: TextAlign.right,
+                                        ),
+                                      ],
+                                    ),
+                                  ],
                                 ),
-                              ),
-                              title: Text(
-                                record.category,
-                                style: TextStyle(
-                                  fontWeight: FontWeight.bold,
-                                  color: record.type == 'income' ? colorScheme.secondary : colorScheme.primary,
-                                ),
-                              ),
-                              subtitle: Text(
-                                "${record.date.day.toString().padLeft(2, '0')}-${record.date.month.toString().padLeft(2, '0')}-${record.date.year}",
-                              ),
-                              trailing: Text(
-                                "${record.type == 'income' ? '+ ' : '- '}Rp ${record.amount}",
-                                style: TextStyle(
-                                  color: record.type == 'income' ? Colors.green : Colors.red,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                              onTap: () {/* Show detail if needed */},
-                              onLongPress: () async {
-                                await _showEditRecordDialog(context, record, index, filteredRecords, widget.email);
-                                setState(() {}); // Refresh setelah edit
-                              },
+                                if (widget.onSetBudget != null)
+                                  Align(
+                                    alignment: Alignment.centerRight,
+                                    child: TextButton.icon(
+                                      onPressed: widget.onSetBudget,
+                                      icon: const Icon(Icons.edit, size: 16),
+                                      label: const Text("Atur Budget"),
+                                    ),
+                                  ),
+                              ],
                             ),
-                          );
-                        },
+                          ),
+                        ),
                       ),
+                      Expanded(
+                        child:
+                            filteredRecords.isEmpty
+                                ? const Center(child: Text('Belum ada catatan'))
+                                : ListView.builder(
+                                  padding: const EdgeInsets.only(
+                                    top: 8,
+                                    left: 8,
+                                    right: 8,
+                                    bottom: 8,
+                                  ),
+                                  itemCount: filteredRecords.length,
+                                  itemBuilder: (context, index) {
+                                    final record =
+                                        filteredRecords[filteredRecords.length -
+                                            1 -
+                                            index];
+                                    return Card(
+                                      margin: const EdgeInsets.symmetric(
+                                        horizontal: 8,
+                                        vertical: 6,
+                                      ),
+                                      elevation: 3,
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(16),
+                                      ),
+                                      color:
+                                          isDark
+                                              ? Colors.grey[900]?.withOpacity(
+                                                0.96,
+                                              )
+                                              : Colors.white.withOpacity(0.96),
+                                      child: ListTile(
+                                        leading: CircleAvatar(
+                                          backgroundColor:
+                                              record.type == 'income'
+                                                  ? colorScheme.secondary
+                                                      .withOpacity(0.15)
+                                                  : colorScheme.primary
+                                                      .withOpacity(0.15),
+                                          child: Icon(
+                                            record.type == 'income'
+                                                ? Icons.arrow_downward
+                                                : Icons.arrow_upward,
+                                            color:
+                                                record.type == 'income'
+                                                    ? colorScheme.secondary
+                                                    : colorScheme.primary,
+                                          ),
+                                        ),
+                                        title: Text(
+                                          record.category,
+                                          style: TextStyle(
+                                            fontWeight: FontWeight.bold,
+                                            color:
+                                                record.type == 'income'
+                                                    ? colorScheme.secondary
+                                                    : colorScheme.primary,
+                                          ),
+                                        ),
+                                        subtitle: Text(
+                                          "${record.date.day.toString().padLeft(2, '0')}-${record.date.month.toString().padLeft(2, '0')}-${record.date.year}",
+                                        ),
+                                        trailing: Text(
+                                          "${record.type == 'income' ? '+ ' : '- '}Rp ${record.amount}",
+                                          style: TextStyle(
+                                            color:
+                                                record.type == 'income'
+                                                    ? Colors.green
+                                                    : Colors.red,
+                                            fontWeight: FontWeight.bold,
+                                          ),
+                                        ),
+                                        onTap: () {
+                                          /* Show detail if needed */
+                                        },
+                                        onLongPress: () async {
+                                          await _showEditRecordDialog(
+                                            context,
+                                            record,
+                                            index,
+                                            filteredRecords,
+                                            widget.email,
+                                          );
+                                          setState(
+                                            () {},
+                                          ); // Refresh setelah edit
+                                        },
+                                      ),
+                                    );
+                                  },
+                                ),
+                      ),
+                    ],
+                  ),
+                ],
               ),
-            ],
-          ),
-        ],
-      ),
     );
+  }
+
+  @override
+  void didUpdateWidget(RecordsScreen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.selectedDate != oldWidget.selectedDate) {
+      _fetchRecords();
+    }
   }
 
   String _monthName(int month) {
     const months = [
-      '', 'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni',
-      'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'
+      '',
+      'Januari',
+      'Februari',
+      'Maret',
+      'April',
+      'Mei',
+      'Juni',
+      'Juli',
+      'Agustus',
+      'September',
+      'Oktober',
+      'November',
+      'Desember',
     ];
     return months[month];
   }

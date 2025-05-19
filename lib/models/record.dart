@@ -1,11 +1,13 @@
 class Record {
-  final String email; // ganti dari username ke email
+  final String? docId; // Firestore document ID
+  final String email;
   final String type; // 'expense' atau 'income'
   final String category;
   final int amount;
   final DateTime date;
 
   Record({
+    this.docId,
     required this.email,
     required this.type,
     required this.category,
@@ -28,4 +30,23 @@ class Record {
     amount: map['amount'],
     date: DateTime.parse(map['date']),
   );
+
+  // Add a copyWith method to easily add docId
+  Record copyWith({
+    String? docId,
+    String? email,
+    String? type,
+    String? category,
+    int? amount,
+    DateTime? date,
+  }) {
+    return Record(
+      docId: docId ?? this.docId,
+      email: email ?? this.email,
+      type: type ?? this.type,
+      category: category ?? this.category,
+      amount: amount ?? this.amount,
+      date: date ?? this.date,
+    );
+  }
 }

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:hive/hive.dart';
+import '../firestore_service.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 import '../models/record.dart';
 
@@ -99,16 +100,17 @@ class _AddScreenState extends State<AddScreen> {
             onPressed: () {
               showDialog(
                 context: context,
-                builder: (context) => AlertDialog(
-                  title: const Text('Info'),
-                  content: const Text('Pengaturan belum tersedia.'),
-                  actions: [
-                    TextButton(
-                      onPressed: () => Navigator.pop(context),
-                      child: const Text('OK'),
+                builder:
+                    (context) => AlertDialog(
+                      title: const Text('Info'),
+                      content: const Text('Pengaturan belum tersedia.'),
+                      actions: [
+                        TextButton(
+                          onPressed: () => Navigator.pop(context),
+                          child: const Text('OK'),
+                        ),
+                      ],
                     ),
-                  ],
-                ),
               );
             },
             icon: const Icon(Icons.settings),
@@ -121,17 +123,18 @@ class _AddScreenState extends State<AddScreen> {
           Container(
             decoration: BoxDecoration(
               gradient: LinearGradient(
-                colors: isDark
-                    ? [
-                        const Color(0xFF23272F),
-                        const Color(0xFF181A20),
-                        const Color(0xFF23272F),
-                      ]
-                    : [
-                        const Color(0xFF1976D2),
-                        const Color(0xFF64B5F6),
-                        const Color(0xFFFFFDE4),
-                      ],
+                colors:
+                    isDark
+                        ? [
+                          const Color(0xFF23272F),
+                          const Color(0xFF181A20),
+                          const Color(0xFF23272F),
+                        ]
+                        : [
+                          const Color(0xFF1976D2),
+                          const Color(0xFF64B5F6),
+                          const Color(0xFFFFFDE4),
+                        ],
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
               ),
@@ -143,18 +146,26 @@ class _AddScreenState extends State<AddScreen> {
               SizedBox(height: 24),
               // Toggle buttons for expense/income
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 8,
+                ),
                 child: Row(
                   children: [
                     Expanded(
                       child: ElevatedButton(
-                        onPressed: () => setState(() {
-                          isExpense = true;
-                          selectedCategory = null;
-                        }),
+                        onPressed:
+                            () => setState(() {
+                              isExpense = true;
+                              selectedCategory = null;
+                            }),
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: isExpense ? colorScheme.primary : colorScheme.primary.withOpacity(0.08),
-                          foregroundColor: isExpense ? Colors.white : colorScheme.primary,
+                          backgroundColor:
+                              isExpense
+                                  ? colorScheme.primary
+                                  : colorScheme.primary.withOpacity(0.08),
+                          foregroundColor:
+                              isExpense ? Colors.white : colorScheme.primary,
                           elevation: 0,
                         ),
                         child: const Text('EXPENSE'),
@@ -163,13 +174,18 @@ class _AddScreenState extends State<AddScreen> {
                     const SizedBox(width: 8),
                     Expanded(
                       child: ElevatedButton(
-                        onPressed: () => setState(() {
-                          isExpense = false;
-                          selectedCategory = null;
-                        }),
+                        onPressed:
+                            () => setState(() {
+                              isExpense = false;
+                              selectedCategory = null;
+                            }),
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: !isExpense ? colorScheme.secondary : colorScheme.secondary.withOpacity(0.08),
-                          foregroundColor: !isExpense ? Colors.white : colorScheme.secondary,
+                          backgroundColor:
+                              !isExpense
+                                  ? colorScheme.secondary
+                                  : colorScheme.secondary.withOpacity(0.08),
+                          foregroundColor:
+                              !isExpense ? Colors.white : colorScheme.secondary,
                           elevation: 0,
                         ),
                         child: const Text('INCOME'),
@@ -200,25 +216,32 @@ class _AddScreenState extends State<AddScreen> {
                         children: [
                           Container(
                             decoration: BoxDecoration(
-                              color: isSelected
-                                  ? colorScheme.primary.withOpacity(0.18)
-                                  : (isDark
-                                      ? Colors.white.withOpacity(0.07)
-                                      : Colors.white),
+                              color:
+                                  isSelected
+                                      ? colorScheme.primary.withOpacity(0.18)
+                                      : (isDark
+                                          ? Colors.white.withOpacity(0.07)
+                                          : Colors.white),
                               borderRadius: BorderRadius.circular(16),
-                              border: isSelected
-                                  ? Border.all(color: colorScheme.primary, width: 2)
-                                  : Border.all(
-                                      color: isDark
-                                          ? Colors.white24
-                                          : Colors.grey.shade300,
-                                      width: 1,
-                                    ),
+                              border:
+                                  isSelected
+                                      ? Border.all(
+                                        color: colorScheme.primary,
+                                        width: 2,
+                                      )
+                                      : Border.all(
+                                        color:
+                                            isDark
+                                                ? Colors.white24
+                                                : Colors.grey.shade300,
+                                        width: 1,
+                                      ),
                               boxShadow: [
                                 BoxShadow(
-                                  color: isDark
-                                      ? Colors.black.withOpacity(0.12)
-                                      : Colors.grey.withOpacity(0.10),
+                                  color:
+                                      isDark
+                                          ? Colors.black.withOpacity(0.12)
+                                          : Colors.grey.withOpacity(0.10),
                                   blurRadius: 6,
                                   offset: const Offset(0, 2),
                                 ),
@@ -229,11 +252,12 @@ class _AddScreenState extends State<AddScreen> {
                             child: Center(
                               child: Icon(
                                 category['icon'],
-                                color: isSelected
-                                    ? colorScheme.primary
-                                    : (isDark
-                                        ? Colors.white
-                                        : Colors.grey[700]),
+                                color:
+                                    isSelected
+                                        ? colorScheme.primary
+                                        : (isDark
+                                            ? Colors.white
+                                            : Colors.grey[700]),
                                 size: 28,
                               ),
                             ),
@@ -243,11 +267,17 @@ class _AddScreenState extends State<AddScreen> {
                             category['name'],
                             textAlign: TextAlign.center,
                             style: TextStyle(
-                              color: isSelected
-                                  ? colorScheme.primary
-                                  : (isDark ? Colors.white70 : Colors.grey[700]),
+                              color:
+                                  isSelected
+                                      ? colorScheme.primary
+                                      : (isDark
+                                          ? Colors.white70
+                                          : Colors.grey[700]),
                               fontSize: 12,
-                              fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                              fontWeight:
+                                  isSelected
+                                      ? FontWeight.bold
+                                      : FontWeight.normal,
                             ),
                           ),
                         ],
@@ -265,13 +295,27 @@ class _AddScreenState extends State<AddScreen> {
 
   String _monthName(int month) {
     const months = [
-      '', 'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni',
-      'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'
+      '',
+      'Januari',
+      'Februari',
+      'Maret',
+      'April',
+      'Mei',
+      'Juni',
+      'Juli',
+      'Agustus',
+      'September',
+      'Oktober',
+      'November',
+      'Desember',
     ];
     return months[month];
   }
 
-  void _showAmountInputModal(BuildContext context, Map<String, dynamic> category) {
+  void _showAmountInputModal(
+    BuildContext context,
+    Map<String, dynamic> category,
+  ) {
     final colorScheme = Theme.of(context).colorScheme;
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final TextEditingController amountController = TextEditingController();
@@ -306,7 +350,11 @@ class _AddScreenState extends State<AddScreen> {
                       color: colorScheme.primary.withOpacity(0.15),
                       shape: BoxShape.circle,
                     ),
-                    child: Icon(category['icon'], color: colorScheme.primary, size: 28),
+                    child: Icon(
+                      category['icon'],
+                      color: colorScheme.primary,
+                      size: 28,
+                    ),
                   ),
                   const SizedBox(height: 12),
                   Text(
@@ -322,7 +370,11 @@ class _AddScreenState extends State<AddScreen> {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      Icon(Icons.calendar_today, color: colorScheme.secondary, size: 20),
+                      Icon(
+                        Icons.calendar_today,
+                        color: colorScheme.secondary,
+                        size: 20,
+                      ),
                       const SizedBox(width: 8),
                       TextButton(
                         onPressed: () async {
@@ -374,7 +426,10 @@ class _AddScreenState extends State<AddScreen> {
                         borderRadius: BorderRadius.circular(16),
                         borderSide: BorderSide.none,
                       ),
-                      contentPadding: const EdgeInsets.symmetric(vertical: 16, horizontal: 16),
+                      contentPadding: const EdgeInsets.symmetric(
+                        vertical: 16,
+                        horizontal: 16,
+                      ),
                     ),
                   ),
                   const SizedBox(height: 24),
@@ -385,37 +440,46 @@ class _AddScreenState extends State<AddScreen> {
                         final amount = int.tryParse(amountController.text) ?? 0;
                         if (amount > 0) {
                           final record = Record(
-                            email: widget.email, // gunakan email
+                            email: widget.email,
                             type: isExpense ? 'expense' : 'income',
                             category: category['name'],
                             amount: amount,
                             date: tempDate,
                           );
-                          final box = Hive.box('records');
-                          final records = box.get(widget.email, defaultValue: <Map>[]) as List;
-                          records.add(record.toMap());
-                          await box.put(widget.email, records);
-                          setState(() { selectedDate = tempDate; });
+                          final uid = FirebaseAuth.instance.currentUser?.uid;
+                          if (uid != null) {
+                            await FirestoreService().addRecordForUser(
+                              record,
+                              uid,
+                            );
+                            setState(() {
+                              selectedDate = tempDate;
+                            });
 
-                          // Cek budget setelah menambah expense
-                          if (isExpense && widget.budget != null) {
-                            final filtered = records
-                              .map((e) => Record.fromMap(Map<String, dynamic>.from(e)))
-                              .where((r) =>
-                                r.type == 'expense' &&
-                                r.date.month == tempDate.month &&
-                                r.date.year == tempDate.year
-                              )
-                              .fold<int>(0, (sum, r) => sum + r.amount);
-                            if (filtered > widget.budget!) {
-                              // ignore: use_build_context_synchronously
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(
-                                  content: Text('Peringatan: Pengeluaran sudah melebihi budget!'),
-                                  backgroundColor: Colors.red,
-                                  duration: Duration(seconds: 3),
-                                ),
-                              );
+                            // fetch all records for budget checking
+                            if (isExpense && widget.budget != null) {
+                              final records = await FirestoreService()
+                                  .getRecordsForUser(uid, month: tempDate);
+                              final filtered = records
+                                  .where(
+                                    (r) =>
+                                        r.type == 'expense' &&
+                                        r.date.month == tempDate.month &&
+                                        r.date.year == tempDate.year,
+                                  )
+                                  .fold<int>(0, (sum, r) => sum + r.amount);
+                              if (filtered > widget.budget!) {
+                                // ignore: use_build_context_synchronously
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(
+                                    content: Text(
+                                      'Peringatan: Pengeluaran sudah melebihi budget!',
+                                    ),
+                                    backgroundColor: Colors.red,
+                                    duration: Duration(seconds: 3),
+                                  ),
+                                );
+                              }
                             }
                           }
                         }
