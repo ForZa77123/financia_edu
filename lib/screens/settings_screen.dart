@@ -34,10 +34,14 @@ class _SettingsScreenState extends State<SettingsScreen> {
   String? profileImagePath;
   bool _notifExpenseOn = false; // hanya untuk tampilan switch
   String? _firestoreName;
+  bool _loading = true;
 
   @override
   void initState() {
     super.initState();
+    Future.delayed(const Duration(seconds: 2), () {
+      if (mounted) setState(() => _loading = false);
+    });
     final usersBox = Hive.box('users');
     final userData = usersBox.get(widget.email);
     if (userData is Map && userData['profileImage'] != null) {
@@ -319,6 +323,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
+    if (_loading) {
+      return const Scaffold(
+        body: Center(
+          child: CircularProgressIndicator(),
+        ),
+      );
+    }
     final usersBox = Hive.box('users');
     final userData = usersBox.get(widget.email);
     String displayName = _firestoreName ?? widget.name;

@@ -113,20 +113,6 @@ class _ChartScreenState extends State<ChartScreen> {
     }).toList();
   }
 
-  List<FlSpot> _buildLineSpots(List<Record> records) {
-    Map<int, double> dailyTotals = {};
-    final now = DateTime.now();
-    for (var r in records.where((e) => e.type == 'expense')) {
-      if (r.date.month == now.month && r.date.year == now.year) {
-        dailyTotals[r.date.day] = (dailyTotals[r.date.day] ?? 0) + r.amount;
-      }
-    }
-    return List.generate(30, (i) {
-      final day = i + 1;
-      return FlSpot(day.toDouble(), dailyTotals[day] ?? 0);
-    });
-  }
-
   List<Map<String, dynamic>> _buildCategorySummary(List<Record> records) {
     final Map<String, double> categoryTotals = {};
     for (var r in records.where((e) => e.type == 'expense')) {
@@ -175,17 +161,16 @@ class _ChartScreenState extends State<ChartScreen> {
         .fold(0, (sum, r) => sum + r.amount);
 
     final pieSections = _buildPieSections(filteredRecords);
-    final lineSpots = _buildLineSpots(filteredRecords);
     final categorySummary = _buildCategorySummary(filteredRecords);
 
     return Scaffold(
       extendBodyBehindAppBar: true,
       appBar: AppBar(
         leading: Padding(
-          padding: const EdgeInsets.all(8.0),
+          padding: const EdgeInsets.all(0.0),
           child: Image.asset(
             'assets/logo.png',
-            height: 32,
+            height: 120,
             fit: BoxFit.contain,
           ),
         ),
@@ -363,12 +348,12 @@ class _ChartScreenState extends State<ChartScreen> {
                                               "Pengeluaran Berdasarkan Kategori",
                                               style: TextStyle(
                                                 fontWeight: FontWeight.bold,
-                                                fontSize: 16,
+                                                fontSize: 18,
                                               ),
                                             ),
-                                            const SizedBox(height: 16),
+                                            const SizedBox(height: 15),
                                             AspectRatio(
-                                              aspectRatio: 1.2,
+                                              aspectRatio: 1.5,
                                               child: PieChart(
                                                 PieChartData(
                                                   sections:
@@ -390,11 +375,11 @@ class _ChartScreenState extends State<ChartScreen> {
                                                           ]
                                                           : pieSections,
                                                   centerSpaceRadius: 40,
-                                                  sectionsSpace: 4,
+                                                  sectionsSpace: 5,
                                                 ),
                                               ),
                                             ),
-                                            const SizedBox(height: 16),
+                                            const SizedBox(height: 20),
                                             // Penjelasan kategori expense
                                             if (categorySummary.isNotEmpty)
                                               Column(
@@ -411,50 +396,49 @@ class _ChartScreenState extends State<ChartScreen> {
                                                   ),
                                                   const SizedBox(height: 8),
                                                   ...categorySummary.map(
-                                                    (cat) => Padding(
-                                                      padding:
-                                                          const EdgeInsets.symmetric(
-                                                            vertical: 2,
-                                                          ),
-                                                      child: Row(
-                                                        children: [
-                                                          Expanded(
-                                                            child: Text(
-                                                              "${cat['category'][0].toUpperCase()}${cat['category'].substring(1)}",
-                                                              style:
-                                                                  const TextStyle(
-                                                                    fontSize:
-                                                                        13,
-                                                                  ),
+                                                    (cat) {
+                                                      // Cari warna kategori sesuai urutan di pieSections
+                                                      PieChartSectionData? pieSection;
+                                                      try {
+                                                        pieSection = pieSections.firstWhere(
+                                                          (section) => section.title.split('\n').first.toLowerCase() == cat['category'].toLowerCase(),
+                                                        );
+                                                      } catch (_) {
+                                                        pieSection = null;
+                                                      }
+                                                      final color = pieSection != null ? pieSection.color : Colors.grey;
+                                                      return Padding(
+                                                        padding: const EdgeInsets.symmetric(vertical: 2),
+                                                        child: Row(
+                                                          children: [
+                                                            Container(
+                                                              width: 16,
+                                                              height: 16,
+                                                              margin: const EdgeInsets.only(right: 8),
+                                                              decoration: BoxDecoration(
+                                                                color: color,
+                                                                shape: BoxShape.circle,
+                                                              ),
                                                             ),
-                                                          ),
-                                                          Text(
-                                                            "${cat['percent'].toStringAsFixed(1)}%",
-                                                            style:
-                                                                const TextStyle(
-                                                                  fontSize: 13,
-                                                                  color:
-                                                                      Colors
-                                                                          .grey,
-                                                                ),
-                                                          ),
-                                                          const SizedBox(
-                                                            width: 12,
-                                                          ),
-                                                          Text(
-                                                            _formatCurrency(
-                                                              cat['total'],
+                                                            Expanded(
+                                                              child: Text(
+                                                                "${cat['category'][0].toUpperCase()}${cat['category'].substring(1)}",
+                                                                style: const TextStyle(fontSize: 13),
+                                                              ),
                                                             ),
-                                                            style: const TextStyle(
-                                                              fontSize: 13,
-                                                              color:
-                                                                  Colors
-                                                                      .black87,
+                                                            Text(
+                                                              "${cat['percent'].toStringAsFixed(1)}%",
+                                                              style: const TextStyle(fontSize: 13, color: Colors.grey),
                                                             ),
-                                                          ),
-                                                        ],
-                                                      ),
-                                                    ),
+                                                            const SizedBox(width: 12),
+                                                            Text(
+                                                              _formatCurrency(cat['total']),
+                                                              style: const TextStyle(fontSize: 13, color: Colors.black87),
+                                                            ),
+                                                          ],
+                                                        ),
+                                                      );
+                                                    },
                                                   ),
                                                 ],
                                               )
@@ -469,109 +453,6 @@ class _ChartScreenState extends State<ChartScreen> {
                                           ],
                                         ),
                                       ),
-                                      // Chart 2: Line Chart penggunaan 1 bulan
-                                      Padding(
-                                        padding: const EdgeInsets.all(16),
-                                        child: Column(
-                                          children: [
-                                            const Text(
-                                              "Penggunaan 1 Bulan",
-                                              style: TextStyle(
-                                                fontWeight: FontWeight.bold,
-                                                fontSize: 16,
-                                              ),
-                                            ),
-                                            const SizedBox(height: 16),
-                                            AspectRatio(
-                                              aspectRatio: 1.7,
-                                              child: LineChart(
-                                                LineChartData(
-                                                  gridData: FlGridData(
-                                                    show: true,
-                                                  ),
-                                                  titlesData: FlTitlesData(
-                                                    leftTitles: AxisTitles(
-                                                      sideTitles: SideTitles(
-                                                        showTitles: true,
-                                                        reservedSize: 40,
-                                                      ),
-                                                    ),
-                                                    bottomTitles: AxisTitles(
-                                                      sideTitles: SideTitles(
-                                                        showTitles: true,
-                                                        interval: 5,
-                                                        getTitlesWidget:
-                                                            (
-                                                              value,
-                                                              meta,
-                                                            ) => Padding(
-                                                              padding:
-                                                                  const EdgeInsets.only(
-                                                                    top: 8,
-                                                                  ),
-                                                              child: Text(
-                                                                value
-                                                                    .toInt()
-                                                                    .toString(),
-                                                                style:
-                                                                    const TextStyle(
-                                                                      fontSize:
-                                                                          10,
-                                                                    ),
-                                                              ),
-                                                            ),
-                                                        reservedSize: 32,
-                                                      ),
-                                                    ),
-                                                    topTitles: AxisTitles(
-                                                      sideTitles: SideTitles(
-                                                        showTitles: false,
-                                                      ),
-                                                    ),
-                                                    rightTitles: AxisTitles(
-                                                      sideTitles: SideTitles(
-                                                        showTitles: false,
-                                                      ),
-                                                    ),
-                                                  ),
-                                                  borderData: FlBorderData(
-                                                    show: true,
-                                                  ),
-                                                  minX: 1,
-                                                  maxX: 30,
-                                                  minY: 0,
-                                                  maxY: (lineSpots
-                                                              .map((e) => e.y)
-                                                              .fold(
-                                                                0.0,
-                                                                (a, b) =>
-                                                                    a > b
-                                                                        ? a
-                                                                        : b,
-                                                              ) *
-                                                          1.2)
-                                                      .clamp(
-                                                        100000,
-                                                        double.infinity,
-                                                      ),
-                                                  lineBarsData: [
-                                                    LineChartBarData(
-                                                      spots: lineSpots,
-                                                      isCurved: true,
-                                                      color:
-                                                          colorScheme.primary,
-                                                      barWidth: 4,
-                                                      dotData: FlDotData(
-                                                        show: false,
-                                                      ),
-                                                    ),
-                                                  ],
-                                                ),
-                                              ),
-                                            ),
-                                          ],
-                                        ),
-                                      ),
                                     ],
                                   ),
                                 ),
@@ -579,9 +460,8 @@ class _ChartScreenState extends State<ChartScreen> {
                                 const SizedBox(height: 8),
                                 Row(
                                   mainAxisAlignment: MainAxisAlignment.center,
-                                  children: List.generate(
-                                    2,
-                                    (index) => Container(
+                                  children: [
+                                    Container(
                                       margin: const EdgeInsets.symmetric(
                                         horizontal: 4,
                                       ),
@@ -590,13 +470,13 @@ class _ChartScreenState extends State<ChartScreen> {
                                       decoration: BoxDecoration(
                                         shape: BoxShape.circle,
                                         color:
-                                            _currentPage == index
+                                            _currentPage == 0
                                                 ? colorScheme.primary
-                                                : colorScheme.primary
-                                                    .withOpacity(0.2),
+                                                : colorScheme.primary.withOpacity(0.2),
                                       ),
                                     ),
-                                  ),
+                                    // Hanya satu dot karena hanya satu page
+                                  ],
                                 ),
                                 const SizedBox(height: 8),
                               ],

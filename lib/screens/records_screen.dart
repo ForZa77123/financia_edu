@@ -235,12 +235,10 @@ class _RecordsScreenState extends State<RecordsScreen> {
                             'amount': newAmount,
                             'date': selectedDate.toIso8601String(),
                           });
-                      Navigator.pop(context);
+                      Navigator.pop(context); // Sudah menutup dialog
                       await _fetchRecords(); // Refresh the list after editing
+                      if (mounted) setState(() {});
                     }
-                    Navigator.pop(context);
-                    // Refresh tampilan setelah edit
-                    if (mounted) setState(() {});
                   },
                   child: const Text('Simpan'),
                 ),
@@ -271,10 +269,10 @@ class _RecordsScreenState extends State<RecordsScreen> {
       extendBodyBehindAppBar: true,
       appBar: AppBar(
         leading: Padding(
-          padding: const EdgeInsets.all(8.0),
+          padding: const EdgeInsets.all(0.0),
           child: Image.asset(
             'assets/logo.png',
-            height: 32,
+            height: 64,
             fit: BoxFit.contain,
           ),
         ),
