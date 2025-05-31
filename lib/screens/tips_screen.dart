@@ -14,7 +14,7 @@ class TipsScreen extends StatefulWidget {
 
 class _TipsScreenState extends State<TipsScreen> {
   // Bank soal quiz
-  final List<Map<String, dynamic>> _quizBank = [
+  final String _defaultQuizBankJson = jsonEncode([
     {
       'type': 'multiple',
       'question': 'Apa tujuan utama menabung?',
@@ -59,115 +59,19 @@ class _TipsScreenState extends State<TipsScreen> {
       'question': 'Menabung hanya penting untuk orang dewasa.',
       'answer': false,
     },
-    {
-      'type': 'multiple',
-      'question':
-          'Jika kamu mendapat uang lebih, apa yang sebaiknya dilakukan?',
-      'options': [
-        'Menghabiskan semuanya',
-        'Menabung sebagian',
-        'Membelikan teman jajan',
-        'Menyembunyikan dari orang tua',
-      ],
-      'answer': 1,
-    },
-    {
-      'type': 'case',
-      'question':
-          'Siti ingin membeli sepatu baru, tapi uangnya belum cukup. Apa langkah terbaik?',
-      'options': [
-        'Meminjam uang ke teman',
-        'Menabung hingga cukup',
-        'Membeli sepatu bekas',
-        'Mengambil uang orang tua tanpa izin',
-      ],
-      'answer': 1,
-    },
-    {
-      'type': 'truefalse',
-      'question': 'Membuat anggaran bulanan bisa membantu mengatur keuangan.',
-      'answer': true,
-    },
-    {
-      'type': 'multiple',
-      'question': 'Apa manfaat mencatat pengeluaran?',
-      'options': [
-        'Agar tahu ke mana uang pergi',
-        'Agar bisa boros',
-        'Agar bisa minta uang lebih',
-        'Agar lupa pengeluaran',
-      ],
-      'answer': 0,
-    },
-    {
-      'type': 'case',
-      'question':
-          'Budi sering membeli jajanan setiap hari hingga uang sakunya habis. Apa saran terbaik?',
-      'options': [
-        'Kurangi jajan dan sisihkan untuk ditabung',
-        'Minta uang saku lebih banyak',
-        'Pinjam uang ke teman',
-        'Abaikan saja',
-      ],
-      'answer': 0,
-    },
-  ];
+  ]);
 
   // Bank tips harian
-  final List<Map<String, String>> _tipsBank = [
+  final String _defaultTipsBankJson = jsonEncode([
     {
       'title': 'Menabung itu Keren!',
       'message':
           'Sisihkan minimal 10% uang sakumu setiap hari untuk masa depan yang lebih baik.',
-      'image': 'assets/images/save_money.png',
     },
-    {
-      'title': 'Belanja Cerdas',
-      'message': 'Buat daftar belanja sebelum ke toko agar tidak boros.',
-      'image': 'assets/images/shopping_list.png',
-    },
-    {
-      'title': 'Hemat Pangkal Kaya',
-      'message': 'Utamakan kebutuhan daripada keinginan.',
-      'image': 'assets/images/smart_spend.png',
-    },
-    {
-      'title': 'Catat Pengeluaran',
-      'message':
-          'Selalu catat setiap pengeluaran agar tahu ke mana uangmu pergi.',
-      'image': 'assets/images/notes.png',
-    },
-    {
-      'title': 'Bandingkan Harga',
-      'message': 'Sebelum membeli, bandingkan harga di beberapa tempat.',
-      'image': 'assets/images/compare.png',
-    },
-    {
-      'title': 'Bawa Bekal Sendiri',
-      'message': 'Membawa bekal dari rumah bisa menghemat pengeluaran jajan.',
-      'image': 'assets/images/lunchbox.png',
-    },
-    {
-      'title': 'Jangan Mudah Tergoda Diskon',
-      'message': 'Beli barang karena butuh, bukan karena diskon.',
-      'image': 'assets/images/discount.png',
-    },
-    {
-      'title': 'Tentukan Tujuan Menabung',
-      'message': 'Menabung dengan tujuan membuatmu lebih semangat.',
-      'image': 'assets/images/goal.png',
-    },
-    {
-      'title': 'Gunakan Uang Secukupnya',
-      'message': 'Belanjakan uang sesuai kebutuhan, bukan keinginan.',
-      'image': 'assets/images/wallet.png',
-    },
-    {
-      'title': 'Jangan Lupa Berbagi',
-      'message': 'Sisihkan sebagian uang untuk membantu sesama.',
-      'image': 'assets/images/share.png',
-    },
-  ];
+  ]);
+
+  List<Map<String, dynamic>> _quizBank = [];
+  List<Map<String, String>> _tipsBank = [];
 
   // Quiz & tips state
   int _quizIndex = 0;
@@ -201,7 +105,7 @@ class _TipsScreenState extends State<TipsScreen> {
   List<Map<String, String>> _eduLinks = [];
   bool _loadingEduLinks = true;
 
-  Future<void> _fetchEduLinks() async {
+  Future<void> _fetchRemoteContent() async {
     try {
       final remoteConfig = FirebaseRemoteConfig.instance;
       await remoteConfig.setConfigSettings(
@@ -210,23 +114,50 @@ class _TipsScreenState extends State<TipsScreen> {
           minimumFetchInterval: const Duration(minutes: 5),
         ),
       );
-      // Set in-app default
-      await remoteConfig.setDefaults({'edu_links': _defaultEduLinksJson});
+      await remoteConfig.setDefaults({
+        'edu_links': _defaultEduLinksJson,
+        'quiz_bank': _defaultQuizBankJson,
+        'tips_bank': _defaultTipsBankJson,
+      });
       await remoteConfig.fetchAndActivate();
-      final jsonString = remoteConfig.getString('edu_links');
-      final List<dynamic> jsonList = json.decode(jsonString);
+
+      // Parse quiz bank
+      final quizJson = remoteConfig.getString('quiz_bank');
+      final quizList = json.decode(quizJson) as List;
+      _quizBank =
+          quizList.map((e) => Map<String, dynamic>.from(e as Map)).toList();
+
+      // Parse tips bank
+      final tipsJson = remoteConfig.getString('tips_bank');
+      final tipsList = json.decode(tipsJson) as List;
+      _tipsBank =
+          tipsList.map((e) => Map<String, String>.from(e as Map)).toList();
+
+      // Parse edu links
+      final eduJson = remoteConfig.getString('edu_links');
+      final eduList = json.decode(eduJson) as List;
       setState(() {
         _eduLinks =
-            jsonList.map((e) => Map<String, String>.from(e as Map)).toList();
+            eduList.map((e) => Map<String, String>.from(e as Map)).toList();
         _loadingEduLinks = false;
+        _randomizeQuizAndTips(); // re-randomize with new data
       });
     } catch (e) {
-      // On error, use the in-app default
-      final List<dynamic> jsonList = json.decode(_defaultEduLinksJson);
+      // Fallback to in-app defaults
+      final quizList = json.decode(_defaultQuizBankJson) as List;
+      _quizBank =
+          quizList.map((e) => Map<String, dynamic>.from(e as Map)).toList();
+
+      final tipsList = json.decode(_defaultTipsBankJson) as List;
+      _tipsBank =
+          tipsList.map((e) => Map<String, String>.from(e as Map)).toList();
+
+      final eduList = json.decode(_defaultEduLinksJson) as List;
       setState(() {
         _eduLinks =
-            jsonList.map((e) => Map<String, String>.from(e as Map)).toList();
+            eduList.map((e) => Map<String, String>.from(e as Map)).toList();
         _loadingEduLinks = false;
+        _randomizeQuizAndTips();
       });
     }
   }
@@ -237,7 +168,7 @@ class _TipsScreenState extends State<TipsScreen> {
     _randomizeQuizAndTips();
     _pageController = PageController(initialPage: _currentTip);
     _startTipTimer();
-    _fetchEduLinks();
+    _fetchRemoteContent();
   }
 
   void _randomizeQuizAndTips() {
@@ -312,6 +243,11 @@ class _TipsScreenState extends State<TipsScreen> {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    if (_quizQuestions.isEmpty || _dailyTips.isEmpty) {
+      return const Center(child: CircularProgressIndicator());
+    }
+
     return Stack(
       children: [
         // Background gradient sesuai tema
@@ -371,26 +307,7 @@ class _TipsScreenState extends State<TipsScreen> {
                                 borderRadius: BorderRadius.circular(16),
                               ),
                               child: ListTile(
-                                leading:
-                                    tip['image'] != null
-                                        ? ClipRRect(
-                                          borderRadius: BorderRadius.circular(
-                                            1,
-                                          ),
-                                          child: Image.asset(
-                                            tip['image']!,
-                                            width: 48,
-                                            height: 48,
-                                            fit: BoxFit.cover,
-                                            errorBuilder:
-                                                (context, error, stackTrace) =>
-                                                    const Icon(
-                                                      Icons.lightbulb,
-                                                      size: 48,
-                                                    ),
-                                          ),
-                                        )
-                                        : const Icon(Icons.lightbulb, size: 48),
+                                leading: const Icon(Icons.lightbulb, size: 48),
                                 title: Text(
                                   tip['title']!,
                                   style: const TextStyle(
