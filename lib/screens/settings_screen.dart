@@ -210,18 +210,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   }
 
   Future<void> _resetFinancialData() async {
-    final usersBox = Hive.box('users');
-    final userData = usersBox.get(widget.email);
-    String? correctPassword;
-    if (userData is Map && userData['password'] != null) {
-      correctPassword = userData['password'];
-    } else if (userData is String) {
-      correctPassword = userData;
-    }
-    final TextEditingController passController = TextEditingController();
     bool isLoading = false;
-    String? errorMsg;
-
     await showDialog(
       context: context,
       barrierDismissible: !isLoading,
@@ -230,27 +219,14 @@ class _SettingsScreenState extends State<SettingsScreen> {
           builder: (context, setDialogState) {
             return AlertDialog(
               title: const Text('Reset Data Keuangan'),
-              content: Column(
+              content: const Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  const Text(
-                    'Masukkan password akun Anda untuk menghapus seluruh data keuangan (catatan & budget) akun ini. Tindakan ini tidak dapat dibatalkan.',
+                  Text(
+                    'Seluruh data keuangan (catatan & budget) akun ini akan dihapus dari perangkat dan cloud. Tindakan ini tidak dapat dibatalkan.',
                     style: TextStyle(fontSize: 14),
                   ),
-                  const SizedBox(height: 16),
-                  TextField(
-                    controller: passController,
-                    obscureText: true,
-                    decoration: const InputDecoration(labelText: 'Password'),
-                  ),
-                  if (errorMsg != null)
-                    Padding(
-                      padding: const EdgeInsets.only(top: 8),
-                      child: Text(
-                        errorMsg!,
-                        style: const TextStyle(color: Colors.red),
-                      ),
-                    ),
+                  SizedBox(height: 16),
                 ],
               ),
               actions: [
@@ -259,66 +235,70 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   child: const Text('Batal'),
                 ),
                 ElevatedButton(
-                  onPressed:
-                      isLoading
-                          ? null
-                          : () async {
-                            setDialogState(() => isLoading = true);
-                            final inputPass = passController.text.trim();
-                            if (inputPass.isEmpty) {
-                              setDialogState(() {
-                                errorMsg = "Password wajib diisi";
-                                isLoading = false;
-                              });
-                              return;
+                  onPressed: isLoading
+                      ? null
+                      : () async {
+                          setDialogState(() => isLoading = true);
+                          // Hapus data keuangan lokal
+                          final recordsBox = Hive.box('records');
+                          final budgetsBox = Hive.box('budgets');
+                          await recordsBox.delete(widget.email);
+                          final keysToDelete = budgetsBox.keys
+                              .where((k) => k.toString().startsWith(widget.email))
+                              .toList();
+                          for (final k in keysToDelete) {
+                            await budgetsBox.delete(k);
+                          }
+                          // Hapus data keuangan di Firestore (cloud)
+                          try {
+                            final user = FirebaseAuth.instance.currentUser;
+                            if (user != null) {
+                              final recordsRef = FirebaseFirestore.instance
+                                  .collection('users')
+                                  .doc(user.uid)
+                                  .collection('records');
+                              final budgetsRef = FirebaseFirestore.instance
+                                  .collection('users')
+                                  .doc(user.uid)
+                                  .collection('budgets');
+                              // Hapus semua records
+                              final recordsSnap = await recordsRef.get();
+                              for (final doc in recordsSnap.docs) {
+                                await doc.reference.delete();
+                              }
+                              // Hapus semua budgets
+                              final budgetsSnap = await budgetsRef.get();
+                              for (final doc in budgetsSnap.docs) {
+                                await doc.reference.delete();
+                              }
                             }
-                            if (correctPassword == null ||
-                                inputPass != correctPassword) {
-                              setDialogState(() {
-                                errorMsg = "Password salah";
-                                isLoading = false;
-                              });
-                              return;
-                            }
-                            // Hapus data keuangan
-                            final recordsBox = Hive.box('records');
-                            final budgetsBox = Hive.box('budgets');
-                            await recordsBox.delete(widget.email);
-                            final keysToDelete =
-                                budgetsBox.keys
-                                    .where(
-                                      (k) =>
-                                          k.toString().startsWith(widget.email),
-                                    )
-                                    .toList();
-                            for (final k in keysToDelete) {
-                              await budgetsBox.delete(k);
-                            }
-                            setDialogState(() => isLoading = false);
-                            Navigator.pop(context);
-                            if (mounted) {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(
-                                  content: Text(
-                                    'Data keuangan berhasil direset.',
-                                  ),
-                                  backgroundColor: Colors.red,
+                          } catch (e) {
+                            // Optional: handle error
+                          }
+                          setDialogState(() => isLoading = false);
+                          Navigator.pop(context);
+                          if (mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text(
+                                  'Data keuangan berhasil direset dari perangkat dan cloud.',
                                 ),
-                              );
-                            }
-                          },
+                                backgroundColor: Colors.red,
+                              ),
+                            );
+                          }
+                        },
                   style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
-                  child:
-                      isLoading
-                          ? const SizedBox(
-                            width: 18,
-                            height: 18,
-                            child: CircularProgressIndicator(
-                              strokeWidth: 2,
-                              color: Colors.white,
-                            ),
-                          )
-                          : const Text('Reset Data'),
+                  child: isLoading
+                      ? const SizedBox(
+                          width: 18,
+                          height: 18,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: Colors.white,
+                          ),
+                        )
+                      : const Text('Reset Data'),
                 ),
               ],
             );
