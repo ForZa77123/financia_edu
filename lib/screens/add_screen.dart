@@ -29,30 +29,30 @@ class _AddScreenState extends State<AddScreen> {
   DateTime selectedDate = DateTime.now();
 
   final List<Map<String, dynamic>> expenseCategories = [
-    {'name': 'shopping', 'icon': Icons.shopping_bag},
-    {'name': 'food', 'icon': Icons.restaurant},
-    {'name': 'phone', 'icon': Icons.phone_android},
-    {'name': 'entertainment', 'icon': Icons.movie},
-    {'name': 'education', 'icon': Icons.school},
-    {'name': 'beauty', 'icon': Icons.brush},
-    {'name': 'sports', 'icon': Icons.sports_soccer},
-    {'name': 'social', 'icon': Icons.people},
-    {'name': 'transportation', 'icon': Icons.directions_bus},
-    {'name': 'clothing', 'icon': Icons.checkroom},
-    {'name': 'car', 'icon': Icons.directions_car},
-    {'name': 'electronics', 'icon': Icons.devices},
-    {'name': 'travel', 'icon': Icons.flight},
-    {'name': 'health', 'icon': Icons.local_hospital},
-    {'name': 'housing', 'icon': Icons.home},
-    {'name': 'more', 'icon': Icons.more_horiz},
+    {'name': 'Shopping', 'icon': Icons.shopping_bag},
+    {'name': 'Food', 'icon': Icons.restaurant},
+    {'name': 'Phone', 'icon': Icons.phone_android},
+    {'name': 'Entertainment', 'icon': Icons.movie},
+    {'name': 'Education', 'icon': Icons.school},
+    {'name': 'Beauty', 'icon': Icons.brush},
+    {'name': 'Sports', 'icon': Icons.sports_soccer},
+    {'name': 'Social', 'icon': Icons.people},
+    {'name': 'Transportation', 'icon': Icons.directions_bus},
+    {'name': 'Clothing', 'icon': Icons.checkroom},
+    {'name': 'Car', 'icon': Icons.directions_car},
+    {'name': 'Electronics', 'icon': Icons.devices},
+    {'name': 'Travel', 'icon': Icons.flight},
+    {'name': 'Health', 'icon': Icons.local_hospital},
+    {'name': 'Housing', 'icon': Icons.home},
+    {'name': 'Others', 'icon': Icons.more_horiz},
   ];
 
   final List<Map<String, dynamic>> incomeCategories = [
-    {'name': 'salary', 'icon': Icons.attach_money},
-    {'name': 'investments', 'icon': Icons.trending_up},
-    {'name': 'part-time', 'icon': Icons.work_outline},
-    {'name': 'bonus', 'icon': Icons.card_giftcard},
-    {'name': 'others', 'icon': Icons.more_horiz},
+    {'name': 'Salary', 'icon': Icons.attach_money},
+    {'name': 'Investments', 'icon': Icons.trending_up},
+    {'name': 'Part-time', 'icon': Icons.work_outline},
+    {'name': 'Bonus', 'icon': Icons.card_giftcard},
+    {'name': 'Others', 'icon': Icons.more_horiz},
   ];
 
   @override

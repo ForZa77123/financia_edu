@@ -270,6 +270,14 @@ class _RecordsScreenState extends State<RecordsScreen> {
     return Scaffold(
       extendBodyBehindAppBar: true,
       appBar: AppBar(
+        leading: Padding(
+          padding: const EdgeInsets.all(8.0),
+          child: Image.asset(
+            'assets/logo.png',
+            height: 32,
+            fit: BoxFit.contain,
+          ),
+        ),
         backgroundColor: Colors.transparent,
         elevation: 0,
         title: Text(

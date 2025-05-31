@@ -476,18 +476,36 @@ class _HomeScreenState extends State<HomeScreen> {
       const TipsScreen(),
       SettingsScreen(
         email: widget.email,
-        username: widget.username,
+        name: widget.username, // gunakan 'name' dari register, sinkronkan argumen
         onLogout: widget.onLogout,
-        onProfileChanged: (newUsername) {
-          widget.onProfileChanged(newUsername);
-        },
+        onSetBudget: null,
         selectedDate: selectedDate,
+        budget: currentBudget,
         themeMode: widget.themeMode,
         onThemeChanged: widget.onThemeChanged,
       ),
     ];
     return Scaffold(
       body: screens[_selectedIndex],
+      appBar: AppBar(
+        leading: Padding(
+          padding: const EdgeInsets.all(8.0),
+          child: Image.asset(
+            'assets/logo.png',
+            height: 32,
+            fit: BoxFit.contain,
+          ),
+        ),
+        title: const Text('FinEdu'),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.notifications),
+            onPressed: () {
+              // Handle notification icon press
+            },
+          ),
+        ],
+      ),
       bottomNavigationBar: BottomNavigationBar(
         currentIndex: _selectedIndex,
         onTap: (index) => setState(() => _selectedIndex = index),

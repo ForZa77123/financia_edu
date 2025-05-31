@@ -278,6 +278,15 @@ class _TipsScreenState extends State<TipsScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 const SizedBox(height: 50),
+                // App Logo
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 16.0),
+                  child: Image.asset(
+                    'assets/logo.png',
+                    height: 64,
+                    fit: BoxFit.contain,
+                  ),
+                ),
                 // Tips Harian Carousel
                 Padding(
                   padding: const EdgeInsets.symmetric(

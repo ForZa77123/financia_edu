@@ -1,13 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:hive/hive.dart';
 import 'dart:io';
-import 'package:image_picker/image_picker.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 class SettingsScreen extends StatefulWidget {
   final String email; // email digunakan untuk login dan key di Hive
-  final String username; // username hanya untuk display dan bisa diubah
+  final String name; // gunakan nama dari register (Your Name), tidak bisa diubah
   final VoidCallback? onLogout;
-  final void Function(String newUsername)? onProfileChanged;
   final Future<void> Function()? onSetBudget;
   final DateTime? selectedDate;
   final double? budget;
@@ -16,9 +15,8 @@ class SettingsScreen extends StatefulWidget {
   const SettingsScreen({
     super.key,
     required this.email,
-    required this.username,
+    required this.name,
     this.onLogout,
-    this.onProfileChanged,
     this.onSetBudget,
     this.selectedDate,
     this.budget,
@@ -33,6 +31,7 @@ class SettingsScreen extends StatefulWidget {
 class _SettingsScreenState extends State<SettingsScreen> {
   String? profileImagePath;
   bool _notifExpenseOn = false; // hanya untuk tampilan switch
+  String? _firestoreName;
 
   @override
   void initState() {
@@ -48,6 +47,24 @@ class _SettingsScreenState extends State<SettingsScreen> {
     setState(() {
       _notifExpenseOn = prefs.get('notif_enabled', defaultValue: true);
     });
+    _fetchFirestoreName(); // Ambil nama dari Firestore
+  }
+
+  Future<void> _fetchFirestoreName() async {
+    try {
+      final doc = await FirebaseFirestore.instance.collection('users').where('email', isEqualTo: widget.email).limit(1).get();
+      if (doc.docs.isNotEmpty) {
+        final firestoreName = doc.docs.first.data()['name'];
+        if (firestoreName != null && firestoreName is String && firestoreName.isNotEmpty) {
+          setState(() {
+            // Update displayName jika berbeda
+            _firestoreName = firestoreName;
+          });
+        }
+      }
+    } catch (e) {
+      // Optional: handle error
+    }
   }
 
   @override
@@ -76,12 +93,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
     } else {
       userData = {};
     }
-    final TextEditingController usernameController = TextEditingController(
-      text: userData['username'] ?? widget.username,
-    );
     final TextEditingController oldPasswordController = TextEditingController();
     final TextEditingController newPasswordController = TextEditingController();
-    String? newProfileImage = profileImagePath;
     String? errorMsg;
 
     await showDialog(
@@ -90,47 +103,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
         return StatefulBuilder(
           builder: (context, setDialogState) {
             return AlertDialog(
-              title: const Text('Edit Profile'),
+              title: const Text('Change Password'),
               content: SingleChildScrollView(
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    GestureDetector(
-                      onTap: () async {
-                        final picker = ImagePicker();
-                        final picked = await picker.pickImage(
-                          source: ImageSource.gallery,
-                        );
-                        if (picked != null) {
-                          setDialogState(() {
-                            newProfileImage = picked.path;
-                          });
-                        }
-                      },
-                      child: CircleAvatar(
-                        radius: 36,
-                        backgroundImage:
-                            newProfileImage != null
-                                ? FileImage(File(newProfileImage!))
-                                : null,
-                        backgroundColor: Theme.of(context).colorScheme.primary,
-                        child:
-                            newProfileImage == null
-                                ? const Icon(
-                                  Icons.person,
-                                  size: 40,
-                                  color: Colors.white,
-                                )
-                                : null,
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-                    TextField(
-                      controller: usernameController,
-                      decoration: const InputDecoration(labelText: 'Username'),
-                    ),
-                    const SizedBox(height: 8),
-                    // Password section
                     TextField(
                       controller: oldPasswordController,
                       decoration: const InputDecoration(
@@ -172,55 +149,33 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 ),
                 ElevatedButton(
                   onPressed: () async {
-                    final newUsername = usernameController.text.trim();
                     final oldPassword = oldPasswordController.text.trim();
                     final newPassword = newPasswordController.text.trim();
                     final currentPassword = userData['password'] ?? '';
-                    // Username wajib diisi
-                    if (newUsername.isEmpty) {
+                    // Validasi
+                    if (oldPassword.isEmpty || newPassword.isEmpty) {
                       setDialogState(() {
-                        errorMsg = "Username wajib diisi";
+                        errorMsg = "Isi password lama dan password baru untuk mengubah password";
                       });
                       return;
                     }
-                    // Jika ingin ganti password, harus isi password lama & baru
-                    if (oldPassword.isNotEmpty || newPassword.isNotEmpty) {
-                      if (oldPassword.isEmpty || newPassword.isEmpty) {
-                        setDialogState(() {
-                          errorMsg =
-                              "Isi password lama dan password baru untuk mengubah password";
-                        });
-                        return;
-                      }
-                      if (oldPassword != currentPassword) {
-                        setDialogState(() {
-                          errorMsg = "Password lama salah";
-                        });
-                        return;
-                      }
+                    if (oldPassword != currentPassword) {
+                      setDialogState(() {
+                        errorMsg = "Password lama salah";
+                      });
+                      return;
                     }
-                    // Update data user (key tetap email)
-                    final updatedPassword =
-                        (oldPassword.isNotEmpty && newPassword.isNotEmpty)
-                            ? newPassword
-                            : currentPassword;
+                    // Update password
                     final newUserData = {
-                      'username': newUsername,
-                      'password': updatedPassword,
-                      'profileImage': newProfileImage,
+                      'username': userData['username'],
+                      'password': newPassword,
+                      'profileImage': userData['profileImage'],
                     };
                     await usersBox.put(widget.email, newUserData);
-                    // Sinkronkan password baru ke prefs jika ada
                     if (prefsBox != null) {
-                      await prefsBox.put('password', updatedPassword);
+                      await prefsBox.put('password', newPassword);
                     }
-                    setState(() {
-                      profileImagePath = newProfileImage;
-                    });
                     Navigator.pop(context);
-                    if (widget.onProfileChanged != null) {
-                      widget.onProfileChanged!(newUsername);
-                    }
                   },
                   child: const Text('Simpan'),
                 ),
@@ -354,11 +309,27 @@ class _SettingsScreenState extends State<SettingsScreen> {
   @override
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
+    final usersBox = Hive.box('users');
+    final userData = usersBox.get(widget.email);
+    String displayName = _firestoreName ?? widget.name;
+    if (_firestoreName == null && userData is Map && userData['name'] != null && userData['name'] != displayName) {
+      displayName = userData['name'];
+    }
     return Scaffold(
       body: SafeArea(
         child: SingleChildScrollView(
           child: Column(
             children: [
+              // App Logo
+              Padding(
+                padding: const EdgeInsets.only(bottom: 16.0),
+                child: Image.asset(
+                  'assets/logo.png',
+                  height: 64,
+                  fit: BoxFit.contain,
+                ),
+              ),
+
               // Profile Section
               Container(
                 padding: const EdgeInsets.all(24),
@@ -380,10 +351,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       child:
                           profileImagePath == null
                               ? const Icon(
-                                Icons.person,
-                                size: 40,
-                                color: Colors.white,
-                              )
+                                  Icons.person,
+                                  size: 40,
+                                  color: Colors.white,
+                                )
                               : null,
                     ),
                     const SizedBox(width: 16),
@@ -392,8 +363,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            // Tampilkan username dari widget
-                            widget.username,
+                            displayName, // Tampilkan nama dari Firestore jika ada
                             style: const TextStyle(
                               fontSize: 20,
                               fontWeight: FontWeight.bold,
@@ -405,10 +375,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
                           ),
                         ],
                       ),
-                    ),
-                    IconButton(
-                      onPressed: _editProfile,
-                      icon: Icon(Icons.edit, color: colorScheme.primary),
                     ),
                   ],
                 ),
@@ -439,12 +405,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     ),
                   ),
                   ListTile(
-                    leading: Icon(Icons.security, color: colorScheme.primary),
-                    title: const Text('Security'),
+                    leading: Icon(Icons.lock_outline, color: colorScheme.primary),
+                    title: const Text('Change Password'),
                     trailing: Icon(
                       Icons.chevron_right,
                       color: colorScheme.primary,
                     ),
+                    onTap: _editProfile, // Pindahkan fitur edit profile ke sini
                   ),
 
                   ListTile(
@@ -593,28 +560,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
                             ),
                       );
                     },
-                  ),
-                  ListTile(
-                    leading: Icon(
-                      Icons.account_balance_wallet,
-                      color: colorScheme.primary,
-                    ),
-                    title: const Text('Atur Budget Bulanan'),
-                    subtitle:
-                        widget.selectedDate != null && widget.budget != null
-                            ? Text(
-                              "Budget bulan ${widget.selectedDate!.month}/${widget.selectedDate!.year}: Rp ${widget.budget!.toStringAsFixed(0)}",
-                              style: const TextStyle(fontSize: 13),
-                            )
-                            : const Text(
-                              "Belum diatur",
-                              style: TextStyle(fontSize: 13),
-                            ),
-                    trailing: Icon(
-                      Icons.chevron_right,
-                      color: colorScheme.primary,
-                    ),
-                    onTap: widget.onSetBudget,
                   ),
                   ListTile(
                     leading: Icon(Icons.delete_forever, color: Colors.red),
