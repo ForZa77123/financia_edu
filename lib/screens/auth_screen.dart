@@ -22,8 +22,7 @@ Future<String> getDeviceId() async {
 class _AuthScreenState extends State<AuthScreen> {
   final TextEditingController _userController = TextEditingController();
   final TextEditingController _passController = TextEditingController();
-  final TextEditingController _nameController =
-      TextEditingController(); // Tambah controller untuk nama
+  final TextEditingController _nameController = TextEditingController(); // Tambah controller untuk nama
   bool isLogin = true;
   String? error;
   bool isReset = false; // Tambahkan state untuk reset password
@@ -121,17 +120,14 @@ class _AuthScreenState extends State<AuthScreen> {
       } else {
         // Register
         final userCredential = await FirebaseAuth.instance
-            .createUserWithEmailAndPassword(
-              email: username,
-              password: password,
-            );
+            .createUserWithEmailAndPassword(email: username, password: password);
         final user = userCredential.user;
         if (user != null) {
           // Simpan nama ke Firestore
-          await FirebaseFirestore.instance
-              .collection('users')
-              .doc(user.uid)
-              .set({'email': username, 'name': name});
+          await FirebaseFirestore.instance.collection('users').doc(user.uid).set({
+            'email': username,
+            'name': name,
+          });
         }
         if (user != null && !user.emailVerified) {
           await user.sendEmailVerification();
@@ -176,24 +172,22 @@ class _AuthScreenState extends State<AuthScreen> {
     try {
       final GoogleSignInAccount? googleUser = await GoogleSignIn().signIn();
       if (googleUser == null) return; // User cancelled
-      final GoogleSignInAuthentication googleAuth =
-          await googleUser.authentication;
+      final GoogleSignInAuthentication googleAuth = await googleUser.authentication;
       final credential = GoogleAuthProvider.credential(
         accessToken: googleAuth.accessToken,
         idToken: googleAuth.idToken,
       );
-      final userCredential = await FirebaseAuth.instance.signInWithCredential(
-        credential,
-      );
+      final userCredential = await FirebaseAuth.instance.signInWithCredential(credential);
       final user = userCredential.user;
       if (user != null) {
-        final userDoc = FirebaseFirestore.instance
-            .collection('users')
-            .doc(user.uid);
+        final userDoc = FirebaseFirestore.instance.collection('users').doc(user.uid);
         final doc = await userDoc.get();
         if (!doc.exists) {
-          // Save email on first sign-in
-          await userDoc.set({'email': user.email});
+          // Save name and email on first sign-in
+          await userDoc.set({
+            'email': user.email,
+            'name': user.displayName ?? '',
+          });
         }
         widget.onLogin(user.email ?? '');
       }
@@ -214,11 +208,7 @@ class _AuthScreenState extends State<AuthScreen> {
             mainAxisSize: MainAxisSize.min,
             children: [
               Text(
-                isLogin
-                    ? "Login"
-                    : isReset
-                    ? "Reset Password"
-                    : "Register",
+                isLogin ? "Login" : isReset ? "Reset Password" : "Register",
                 style: const TextStyle(fontSize: 24),
               ),
               if (!isLogin && !isReset)
@@ -242,11 +232,7 @@ class _AuthScreenState extends State<AuthScreen> {
               ElevatedButton(
                 onPressed: _submit,
                 child: Text(
-                  isLogin
-                      ? "Login"
-                      : isReset
-                      ? "Kirim Link Reset"
-                      : "Register",
+                  isLogin ? "Login" : isReset ? "Kirim Link Reset" : "Register",
                 ),
               ),
               const SizedBox(height: 8),
@@ -266,26 +252,21 @@ class _AuthScreenState extends State<AuthScreen> {
                         'Continue with Google',
                         style: TextStyle(
                           fontWeight: FontWeight.w600,
-                          color:
-                              Theme.of(context).brightness == Brightness.dark
-                                  ? Colors.white
-                                  : Colors.black87,
+                          color: Theme.of(context).brightness == Brightness.dark
+                              ? Colors.white
+                              : Colors.black87,
                         ),
                       ),
                       style: OutlinedButton.styleFrom(
-                        backgroundColor:
-                            Theme.of(context).brightness == Brightness.dark
-                                ? const Color(0xFF222222)
-                                : Colors.white,
+                        backgroundColor: Theme.of(context).brightness == Brightness.dark
+                            ? const Color(0xFF222222)
+                            : Colors.white,
                         side: BorderSide(
-                          color:
-                              Theme.of(context).brightness == Brightness.dark
-                                  ? const Color(0xFF444444)
-                                  : const Color(0xFFE0E0E0),
+                          color: Theme.of(context).brightness == Brightness.dark
+                              ? const Color(0xFF444444)
+                              : const Color(0xFFE0E0E0),
                         ),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(8),
-                        ),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                         padding: const EdgeInsets.symmetric(horizontal: 12),
                         alignment: Alignment.center,
                       ),
@@ -302,11 +283,7 @@ class _AuthScreenState extends State<AuthScreen> {
                       _passController.clear();
                     });
                   },
-                  child: Text(
-                    isLogin
-                        ? "Belum punya akun? Register"
-                        : "Sudah punya akun? Login",
-                  ),
+                  child: Text(isLogin ? "Belum punya akun? Register" : "Sudah punya akun? Login"),
                 ),
               if (!isReset && isLogin)
                 TextButton(
@@ -315,11 +292,10 @@ class _AuthScreenState extends State<AuthScreen> {
                 ),
               if (isReset)
                 TextButton(
-                  onPressed:
-                      () => setState(() {
-                        isLogin = true;
-                        error = null;
-                      }),
+                  onPressed: () => setState(() {
+                    isLogin = true;
+                    error = null;
+                  }),
                   child: const Text("Kembali ke Login"),
                 ),
             ],

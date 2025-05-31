@@ -12,20 +12,7 @@
           "package_name": "com.tubespam.finansiaedu"
         }
       },
-      "oauth_client": [
-        {
-          "client_id": "868690393452-427eofe87p6g6479e05jus4j0drnkgl3.apps.googleusercontent.com",
-          "client_type": 1,
-          "android_info": {
-            "package_name": "com.tubespam.finansiaedu",
-            "certificate_hash": "1aa32506a9c01efa236d55e6dc6da196708869af"
-          }
-        },
-        {
-          "client_id": "868690393452-stk7m38edmer5m8tehrm0aqe1fdfrmrp.apps.googleusercontent.com",
-          "client_type": 3
-        }
-      ],
+      "oauth_client": [],
       "api_key": [
         {
           "current_key": "AIzaSyCFfgMdl8zTXyC90uHuyiIMPrLcu8znX-k"
@@ -33,12 +20,7 @@
       ],
       "services": {
         "appinvite_service": {
-          "other_platform_oauth_client": [
-            {
-              "client_id": "868690393452-stk7m38edmer5m8tehrm0aqe1fdfrmrp.apps.googleusercontent.com",
-              "client_type": 3
-            }
-          ]
+          "other_platform_oauth_client": []
         }
       }
     }
