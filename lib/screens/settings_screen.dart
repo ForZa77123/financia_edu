@@ -42,6 +42,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
     if (userData is Map && userData['profileImage'] != null) {
       profileImagePath = userData['profileImage'];
     }
+
+    // Load notification preference from Hive
+    final prefs = Hive.box('prefs');
+    setState(() {
+      _notifExpenseOn = prefs.get('notif_enabled', defaultValue: true);
+    });
   }
 
   @override
@@ -151,7 +157,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     if (errorMsg != null)
                       Padding(
                         padding: const EdgeInsets.only(top: 8),
-                        child: Text(errorMsg!, style: const TextStyle(color: Colors.red)),
+                        child: Text(
+                          errorMsg!,
+                          style: const TextStyle(color: Colors.red),
+                        ),
                       ),
                   ],
                 ),
@@ -178,7 +187,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     if (oldPassword.isNotEmpty || newPassword.isNotEmpty) {
                       if (oldPassword.isEmpty || newPassword.isEmpty) {
                         setDialogState(() {
-                          errorMsg = "Isi password lama dan password baru untuk mengubah password";
+                          errorMsg =
+                              "Isi password lama dan password baru untuk mengubah password";
                         });
                         return;
                       }
@@ -190,9 +200,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       }
                     }
                     // Update data user (key tetap email)
-                    final updatedPassword = (oldPassword.isNotEmpty && newPassword.isNotEmpty)
-                        ? newPassword
-                        : currentPassword;
+                    final updatedPassword =
+                        (oldPassword.isNotEmpty && newPassword.isNotEmpty)
+                            ? newPassword
+                            : currentPassword;
                     final newUserData = {
                       'username': newUsername,
                       'password': updatedPassword,
@@ -253,14 +264,15 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   TextField(
                     controller: passController,
                     obscureText: true,
-                    decoration: const InputDecoration(
-                      labelText: 'Password',
-                    ),
+                    decoration: const InputDecoration(labelText: 'Password'),
                   ),
                   if (errorMsg != null)
                     Padding(
                       padding: const EdgeInsets.only(top: 8),
-                      child: Text(errorMsg!, style: const TextStyle(color: Colors.red)),
+                      child: Text(
+                        errorMsg!,
+                        style: const TextStyle(color: Colors.red),
+                      ),
                     ),
                 ],
               ),
@@ -270,56 +282,66 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   child: const Text('Batal'),
                 ),
                 ElevatedButton(
-                  onPressed: isLoading
-                      ? null
-                      : () async {
-                          setDialogState(() => isLoading = true);
-                          final inputPass = passController.text.trim();
-                          if (inputPass.isEmpty) {
-                            setDialogState(() {
-                              errorMsg = "Password wajib diisi";
-                              isLoading = false;
-                            });
-                            return;
-                          }
-                          if (correctPassword == null || inputPass != correctPassword) {
-                            setDialogState(() {
-                              errorMsg = "Password salah";
-                              isLoading = false;
-                            });
-                            return;
-                          }
-                          // Hapus data keuangan
-                          final recordsBox = Hive.box('records');
-                          final budgetsBox = Hive.box('budgets');
-                          await recordsBox.delete(widget.email);
-                          final keysToDelete = budgetsBox.keys
-                              .where((k) => k.toString().startsWith(widget.email))
-                              .toList();
-                          for (final k in keysToDelete) {
-                            await budgetsBox.delete(k);
-                          }
-                          setDialogState(() => isLoading = false);
-                          Navigator.pop(context);
-                          if (mounted) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(
-                                content: Text('Data keuangan berhasil direset.'),
-                                backgroundColor: Colors.red,
-                              ),
-                            );
-                          }
-                        },
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.red,
-                  ),
-                  child: isLoading
-                      ? const SizedBox(
-                          width: 18,
-                          height: 18,
-                          child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
-                        )
-                      : const Text('Reset Data'),
+                  onPressed:
+                      isLoading
+                          ? null
+                          : () async {
+                            setDialogState(() => isLoading = true);
+                            final inputPass = passController.text.trim();
+                            if (inputPass.isEmpty) {
+                              setDialogState(() {
+                                errorMsg = "Password wajib diisi";
+                                isLoading = false;
+                              });
+                              return;
+                            }
+                            if (correctPassword == null ||
+                                inputPass != correctPassword) {
+                              setDialogState(() {
+                                errorMsg = "Password salah";
+                                isLoading = false;
+                              });
+                              return;
+                            }
+                            // Hapus data keuangan
+                            final recordsBox = Hive.box('records');
+                            final budgetsBox = Hive.box('budgets');
+                            await recordsBox.delete(widget.email);
+                            final keysToDelete =
+                                budgetsBox.keys
+                                    .where(
+                                      (k) =>
+                                          k.toString().startsWith(widget.email),
+                                    )
+                                    .toList();
+                            for (final k in keysToDelete) {
+                              await budgetsBox.delete(k);
+                            }
+                            setDialogState(() => isLoading = false);
+                            Navigator.pop(context);
+                            if (mounted) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                  content: Text(
+                                    'Data keuangan berhasil direset.',
+                                  ),
+                                  backgroundColor: Colors.red,
+                                ),
+                              );
+                            }
+                          },
+                  style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+                  child:
+                      isLoading
+                          ? const SizedBox(
+                            width: 18,
+                            height: 18,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              color: Colors.white,
+                            ),
+                          )
+                          : const Text('Reset Data'),
                 ),
               ],
             );
@@ -406,10 +428,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     title: const Text('Notifications'),
                     trailing: Switch(
                       value: _notifExpenseOn,
-                      onChanged: (val) {
+                      onChanged: (val) async {
                         setState(() {
                           _notifExpenseOn = val;
                         });
+                        final prefs = Hive.box('prefs');
+                        await prefs.put('notif_enabled', val);
                       },
                       activeColor: colorScheme.primary,
                     ),
@@ -477,8 +501,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         // Simpan theme ke prefs
                         final prefs = Hive.box('prefs');
                         String themeStr = 'light';
-                        if (selected == ThemeMode.dark) themeStr = 'dark';
-                        else if (selected == ThemeMode.system) themeStr = 'system';
+                        if (selected == ThemeMode.dark)
+                          themeStr = 'dark';
+                        else if (selected == ThemeMode.system)
+                          themeStr = 'system';
                         await prefs.put('themeMode', themeStr);
                       }
                     },
@@ -493,34 +519,40 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     onTap: () {
                       showDialog(
                         context: context,
-                        builder: (context) => AlertDialog(
-                          title: const Text('Tentang Aplikasi'),
-                          content: const Column(
-                            mainAxisSize: MainAxisSize.min,
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                'FinEdu - Financial Education',
-                                style: TextStyle(fontWeight: FontWeight.bold),
+                        builder:
+                            (context) => AlertDialog(
+                              title: const Text('Tentang Aplikasi'),
+                              content: const Column(
+                                mainAxisSize: MainAxisSize.min,
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    'FinEdu - Financial Education',
+                                    style: TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                  SizedBox(height: 8),
+                                  Text(
+                                    'Aplikasi edukasi keuangan untuk membantu pengguna mencatat pemasukan, pengeluaran, mengatur budget bulanan, serta mendapatkan tips dan kuis finansial. Cocok untuk pelajar dan siapa saja yang ingin belajar mengelola keuangan dengan mudah.',
+                                  ),
+                                  SizedBox(height: 12),
+                                  Text(
+                                    'Versi 0.1.0',
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      color: Colors.grey,
+                                    ),
+                                  ),
+                                ],
                               ),
-                              SizedBox(height: 8),
-                              Text(
-                                'Aplikasi edukasi keuangan untuk membantu pengguna mencatat pemasukan, pengeluaran, mengatur budget bulanan, serta mendapatkan tips dan kuis finansial. Cocok untuk pelajar dan siapa saja yang ingin belajar mengelola keuangan dengan mudah.',
-                              ),
-                              SizedBox(height: 12),
-                              Text(
-                                'Versi 0.1.0',
-                                style: TextStyle(fontSize: 12, color: Colors.grey),
-                              ),
-                            ],
-                          ),
-                          actions: [
-                            TextButton(
-                              onPressed: () => Navigator.pop(context),
-                              child: const Text('Tutup'),
+                              actions: [
+                                TextButton(
+                                  onPressed: () => Navigator.pop(context),
+                                  child: const Text('Tutup'),
+                                ),
+                              ],
                             ),
-                          ],
-                        ),
                       );
                     },
                   ),

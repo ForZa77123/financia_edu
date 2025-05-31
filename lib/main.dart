@@ -1,3 +1,4 @@
+import 'package:google_api_availability/google_api_availability.dart';
 import 'package:flutter/material.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'screens/chart_screen.dart';
@@ -8,10 +9,57 @@ import 'screens/settings_screen.dart';
 import 'screens/auth_screen.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'firebase_options.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
+import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+
+final FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin =
+    FlutterLocalNotificationsPlugin();
+
+Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
+  await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+  // Optionally handle background message
+}
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  GooglePlayServicesAvailability availability =
+      await GoogleApiAvailability.instance
+          .checkGooglePlayServicesAvailability();
+
+  if (availability != GooglePlayServicesAvailability.success) {
+    await GoogleApiAvailability.instance.makeGooglePlayServicesAvailable();
+  }
+
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+
+  // Request notification permissions (for iOS and Android 13+)
+  await FirebaseMessaging.instance.requestPermission();
+
+  // Set up local notifications
+  const AndroidInitializationSettings initializationSettingsAndroid =
+      AndroidInitializationSettings('@mipmap/ic_launcher');
+  const InitializationSettings initializationSettings = InitializationSettings(
+    android: initializationSettingsAndroid,
+  );
+  await flutterLocalNotificationsPlugin.initialize(initializationSettings);
+
+  const AndroidNotificationChannel channel = AndroidNotificationChannel(
+    'high_importance_channel', // id
+    'High Importance Notifications', // title
+    description: 'This channel is used for important notifications.',
+    importance: Importance.high,
+  );
+
+  await flutterLocalNotificationsPlugin
+      .resolvePlatformSpecificImplementation<
+        AndroidFlutterLocalNotificationsPlugin
+      >()
+      ?.createNotificationChannel(channel);
+
+  // Set up background handler
+  FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
+
   await Hive.initFlutter();
   await Hive.openBox('users');
   await Hive.openBox('records');
@@ -36,6 +84,57 @@ class _MainAppState extends State<MainApp> {
   void initState() {
     super.initState();
     _loadPrefs();
+
+    // FCM foreground message handler
+    FirebaseMessaging.onMessage.listen((RemoteMessage message) {
+      final prefs = Hive.box('prefs');
+      final notifEnabled = prefs.get('notif_enabled', defaultValue: true);
+      if (!notifEnabled) return; // Don't show notification if disabled
+
+      RemoteNotification? notification = message.notification;
+      AndroidNotification? android = message.notification?.android;
+      if (notification != null && android != null) {
+        flutterLocalNotificationsPlugin.show(
+          notification.hashCode,
+          notification.title,
+          notification.body,
+          const NotificationDetails(
+            android: AndroidNotificationDetails(
+              'high_importance_channel',
+              'High Importance Notifications',
+              channelDescription:
+                  'This channel is used for important notifications.',
+              importance: Importance.high,
+              priority: Priority.high,
+              icon: '@mipmap/ic_launcher',
+            ),
+          ),
+        );
+      }
+    });
+
+    // FCM notification tap (background)
+    FirebaseMessaging.onMessageOpenedApp.listen((RemoteMessage message) {
+      debugPrint('Notification clicked with data: ${message.data}');
+      // Handle navigation or logic here
+    });
+
+    // FCM notification tap (terminated)
+    FirebaseMessaging.instance.getInitialMessage().then((
+      RemoteMessage? message,
+    ) {
+      if (message != null) {
+        debugPrint(
+          'App opened from terminated state by notification: ${message.data}',
+        );
+        // Handle navigation or logic here
+      }
+    });
+
+    // Print FCM token for testing
+    FirebaseMessaging.instance.getToken().then((token) {
+      debugPrint('FCM Token: $token');
+    });
   }
 
   Future<void> _loadPrefs() async {
