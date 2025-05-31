@@ -67,7 +67,24 @@ class _AuthScreenState extends State<AuthScreen> {
   void _submit() async {
     final username = _userController.text.trim();
     final password = _passController.text.trim();
-    final name = _nameController.text.trim(); // Ambil nama
+    final name = _nameController.text.trim();
+    if (isReset) {
+      if (username.isEmpty) {
+        setState(() => error = "Email wajib diisi");
+        return;
+      }
+      try {
+        await FirebaseAuth.instance.sendPasswordResetEmail(email: username);
+        setState(() {
+          isReset = false;
+          isLogin = true;
+          error = "Link reset password telah dikirim ke email.";
+        });
+      } on FirebaseAuthException catch (e) {
+        setState(() => error = e.message ?? 'Gagal mengirim link reset');
+      }
+      return;
+    }
     if (!isLogin && name.isEmpty) {
       setState(() => error = "Nama wajib diisi");
       return;

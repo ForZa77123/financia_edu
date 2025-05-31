@@ -164,30 +164,38 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   onPressed: () async {
                     final oldPassword = oldPasswordController.text.trim();
                     final newPassword = newPasswordController.text.trim();
-                    final currentPassword = userData['password'] ?? '';
-                    // Validasi
                     if (oldPassword.isEmpty || newPassword.isEmpty) {
                       setDialogState(() {
-                        errorMsg =
-                            "Isi password lama dan password baru untuk mengubah password";
+                        errorMsg = 'Semua field wajib diisi';
                       });
                       return;
                     }
-                    if (oldPassword != currentPassword) {
+                    // Validasi password lama
+                    if (userData['password'] != oldPassword) {
                       setDialogState(() {
-                        errorMsg = "Password lama salah";
+                        errorMsg = 'Password lama salah';
                       });
                       return;
                     }
-                    // Update password
+                    // Update password di Hive
                     final newUserData = {
-                      'username': userData['username'],
+                      ...userData,
                       'password': newPassword,
-                      'profileImage': userData['profileImage'],
                     };
                     await usersBox.put(widget.email, newUserData);
                     if (prefsBox != null) {
                       await prefsBox.put('password', newPassword);
+                    }
+                    // Sinkronkan password ke Firestore
+                    try {
+                      final user = FirebaseAuth.instance.currentUser;
+                      if (user != null) {
+                        await FirebaseFirestore.instance.collection('users').doc(user.uid).update({
+                          'password': newPassword,
+                        });
+                      }
+                    } catch (e) {
+                      // Optional: handle error
                     }
                     Navigator.pop(context);
                   },
