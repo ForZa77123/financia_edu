@@ -7,7 +7,6 @@ Financia Edu adalah aplikasi edukasi keuangan berbasis Flutter yang membantu pen
 - **Visualisasi**: Lihat ringkasan keuangan bulanan dalam bentuk pie chart interaktif.
 - **Manajemen Anggaran**: Atur budget bulanan dan dapatkan peringatan jika pengeluaran melebihi anggaran.
 - **Tips Keuangan Harian**: Dapatkan tips edukasi keuangan yang tampil otomatis di halaman Tips, membantu membangun kebiasaan finansial yang baik.
-- **Google Sign-In**: Login cepat dan aman menggunakan akun Google.
 - **Sinkronisasi Cloud**: Data keuangan tersimpan di Firestore dan dapat diakses di berbagai perangkat.
 - **Tampilan Modern**: UI adaptif dengan tema terang/gelap dan logo aplikasi yang konsisten.
 
