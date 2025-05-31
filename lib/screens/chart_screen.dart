@@ -167,7 +167,7 @@ class _ChartScreenState extends State<ChartScreen> {
       extendBodyBehindAppBar: true,
       appBar: AppBar(
         leading: Padding(
-          padding: const EdgeInsets.all(0.0),
+          padding: const EdgeInsets.all(6.0),
           child: Image.asset(
             'assets/logo.png',
             height: 120,
