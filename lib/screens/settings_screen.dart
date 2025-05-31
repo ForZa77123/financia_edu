@@ -127,13 +127,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       obscureText: true,
                     ),
                     const SizedBox(height: 8),
-                    TextField(
-                      enabled: false,
-                      decoration: InputDecoration(
-                        labelText: 'Email',
-                        hintText: widget.email,
-                      ),
-                    ),
+                    // Hapus field email yang disabled
                     if (errorMsg != null)
                       Padding(
                         padding: const EdgeInsets.only(top: 8),

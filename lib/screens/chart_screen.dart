@@ -456,28 +456,6 @@ class _ChartScreenState extends State<ChartScreen> {
                                     ],
                                   ),
                                 ),
-                                // Dots indicator
-                                const SizedBox(height: 8),
-                                Row(
-                                  mainAxisAlignment: MainAxisAlignment.center,
-                                  children: [
-                                    Container(
-                                      margin: const EdgeInsets.symmetric(
-                                        horizontal: 4,
-                                      ),
-                                      width: 10,
-                                      height: 10,
-                                      decoration: BoxDecoration(
-                                        shape: BoxShape.circle,
-                                        color:
-                                            _currentPage == 0
-                                                ? colorScheme.primary
-                                                : colorScheme.primary.withOpacity(0.2),
-                                      ),
-                                    ),
-                                    // Hanya satu dot karena hanya satu page
-                                  ],
-                                ),
                                 const SizedBox(height: 8),
                               ],
                             ),

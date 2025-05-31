@@ -3,7 +3,6 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:device_info_plus/device_info_plus.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:google_sign_in/google_sign_in.dart';
 
 class AuthScreen extends StatefulWidget {
   final void Function(String username) onLogin;
@@ -184,37 +183,6 @@ class _AuthScreenState extends State<AuthScreen> {
     });
   }
 
-  Future<void> _signInWithGoogle() async {
-    setState(() => error = null);
-    try {
-      final GoogleSignInAccount? googleUser = await GoogleSignIn().signIn();
-      if (googleUser == null) return; // User cancelled
-      final GoogleSignInAuthentication googleAuth = await googleUser.authentication;
-      final credential = GoogleAuthProvider.credential(
-        accessToken: googleAuth.accessToken,
-        idToken: googleAuth.idToken,
-      );
-      final userCredential = await FirebaseAuth.instance.signInWithCredential(credential);
-      final user = userCredential.user;
-      if (user != null) {
-        final userDoc = FirebaseFirestore.instance.collection('users').doc(user.uid);
-        final doc = await userDoc.get();
-        if (!doc.exists) {
-          // Save name and email on first sign-in
-          await userDoc.set({
-            'email': user.email,
-            'name': user.displayName ?? '',
-          });
-        }
-        widget.onLogin(user.email ?? '');
-      }
-    } on FirebaseAuthException catch (e) {
-      setState(() => error = e.message ?? 'Google sign-in error');
-    } catch (e) {
-      setState(() => error = 'Google sign-in error');
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -224,6 +192,15 @@ class _AuthScreenState extends State<AuthScreen> {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
+              // Logo di atas judul
+              Padding(
+                padding: const EdgeInsets.only(bottom: 25.0),
+                child: Image.asset(
+                  'assets/logo.png',
+                  height: 100,
+                  fit: BoxFit.contain,
+                ),
+              ),
               Text(
                 isLogin ? "Login" : isReset ? "Reset Password" : "Register",
                 style: const TextStyle(fontSize: 24),
@@ -253,44 +230,6 @@ class _AuthScreenState extends State<AuthScreen> {
                 ),
               ),
               const SizedBox(height: 8),
-              // Google Sign-In Button
-              if (!isReset)
-                Center(
-                  child: SizedBox(
-                    width: 260,
-                    height: 44,
-                    child: OutlinedButton.icon(
-                      icon: Image.asset(
-                        'assets/google_logo.png',
-                        height: 24,
-                        width: 24,
-                      ),
-                      label: Text(
-                        'Continue with Google',
-                        style: TextStyle(
-                          fontWeight: FontWeight.w600,
-                          color: Theme.of(context).brightness == Brightness.dark
-                              ? Colors.white
-                              : Colors.black87,
-                        ),
-                      ),
-                      style: OutlinedButton.styleFrom(
-                        backgroundColor: Theme.of(context).brightness == Brightness.dark
-                            ? const Color(0xFF222222)
-                            : Colors.white,
-                        side: BorderSide(
-                          color: Theme.of(context).brightness == Brightness.dark
-                              ? const Color(0xFF444444)
-                              : const Color(0xFFE0E0E0),
-                        ),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                        padding: const EdgeInsets.symmetric(horizontal: 12),
-                        alignment: Alignment.center,
-                      ),
-                      onPressed: _signInWithGoogle,
-                    ),
-                  ),
-                ),
               if (!isReset)
                 TextButton(
                   onPressed: () {

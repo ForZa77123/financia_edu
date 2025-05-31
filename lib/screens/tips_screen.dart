@@ -297,12 +297,7 @@ class _TipsScreenState extends State<TipsScreen> {
                             final tip = _dailyTips[idx];
                             return Card(
                               elevation: 5,
-                              color:
-                                  isDark
-                                      ? Colors.grey[900]?.withOpacity(0.13)
-                                      : Theme.of(
-                                        context,
-                                      ).colorScheme.secondary.withOpacity(0.13),
+                              color: isDark ? Colors.grey[900] : Colors.white, // White for light, dark for dark
                               shape: RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(16),
                               ),
