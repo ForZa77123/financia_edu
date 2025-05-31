@@ -102,7 +102,7 @@ class _ChartScreenState extends State<ChartScreen> {
       return PieChartSectionData(
         color: colors[i++ % colors.length],
         value: e.value,
-        title: "${e.key}\n${percent.toStringAsFixed(1)}%",
+        title: "",
         radius: 50,
         titleStyle: const TextStyle(
           color: Colors.white,
@@ -356,24 +356,27 @@ class _ChartScreenState extends State<ChartScreen> {
                                               aspectRatio: 1.5,
                                               child: PieChart(
                                                 PieChartData(
-                                                  sections:
-                                                      pieSections.isEmpty
-                                                          ? [
-                                                            PieChartSectionData(
-                                                              color:
-                                                                  Colors.grey,
-                                                              value: 1,
-                                                              title: 'No Data',
-                                                              radius: 50,
-                                                              titleStyle:
-                                                                  const TextStyle(
-                                                                    color:
-                                                                        Colors
-                                                                            .white,
-                                                                  ),
-                                                            ),
-                                                          ]
-                                                          : pieSections,
+                                                  sections: pieSections.isEmpty
+                                                      ? [
+                                                          PieChartSectionData(
+                                                            color: Colors.grey,
+                                                            value: 1,
+                                                            title: '', // Hapus tulisan 'No Data'
+                                                            radius: 50,
+                                                            titleStyle:
+                                                                const TextStyle(
+                                                                  color: Colors
+                                                                      .white,
+                                                                ),
+                                                          ),
+                                                        ]
+                                                      : pieSections.map((section) => PieChartSectionData(
+                                                            color: section.color,
+                                                            value: section.value,
+                                                            title: '', // Hapus nama dan persen
+                                                            radius: section.radius,
+                                                            titleStyle: section.titleStyle,
+                                                          )).toList(),
                                                   centerSpaceRadius: 40,
                                                   sectionsSpace: 5,
                                                 ),
@@ -397,16 +400,9 @@ class _ChartScreenState extends State<ChartScreen> {
                                                   const SizedBox(height: 8),
                                                   ...categorySummary.map(
                                                     (cat) {
-                                                      // Cari warna kategori sesuai urutan di pieSections
-                                                      PieChartSectionData? pieSection;
-                                                      try {
-                                                        pieSection = pieSections.firstWhere(
-                                                          (section) => section.title.split('\n').first.toLowerCase() == cat['category'].toLowerCase(),
-                                                        );
-                                                      } catch (_) {
-                                                        pieSection = null;
-                                                      }
-                                                      final color = pieSection != null ? pieSection.color : Colors.grey;
+                                                      // Ambil warna berdasarkan urutan index kategori di summary dan pieSections
+                                                      final int idx = categorySummary.indexOf(cat);
+                                                      final color = idx < pieSections.length ? pieSections[idx].color : Colors.grey;
                                                       return Padding(
                                                         padding: const EdgeInsets.symmetric(vertical: 2),
                                                         child: Row(
@@ -426,11 +422,8 @@ class _ChartScreenState extends State<ChartScreen> {
                                                                 style: const TextStyle(fontSize: 13),
                                                               ),
                                                             ),
-                                                            Text(
-                                                              "${cat['percent'].toStringAsFixed(1)}%",
-                                                              style: const TextStyle(fontSize: 13, color: Colors.grey),
-                                                            ),
-                                                            const SizedBox(width: 12),
+                                                            // Persen dihapus
+                                                            // const SizedBox(width: 12),
                                                             Text(
                                                               _formatCurrency(cat['total']),
                                                               style: const TextStyle(fontSize: 13, color: Colors.black87),
