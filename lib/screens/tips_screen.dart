@@ -2,6 +2,8 @@ import 'dart:async';
 import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:firebase_remote_config/firebase_remote_config.dart';
+import 'dart:convert';
 
 class TipsScreen extends StatefulWidget {
   const TipsScreen({super.key});
@@ -20,7 +22,7 @@ class _TipsScreenState extends State<TipsScreen> {
         'Membeli barang mewah',
         'Mengamankan masa depan',
         'Menghabiskan uang',
-        'Berfoya-foya'
+        'Berfoya-foya',
       ],
       'answer': 1,
     },
@@ -31,12 +33,13 @@ class _TipsScreenState extends State<TipsScreen> {
     },
     {
       'type': 'case',
-      'question': 'Andi menerima uang saku Rp20.000/hari. Ia ingin membeli buku seharga Rp100.000. Apa yang sebaiknya Andi lakukan?',
+      'question':
+          'Andi menerima uang saku Rp20.000/hari. Ia ingin membeli buku seharga Rp100.000. Apa yang sebaiknya Andi lakukan?',
       'options': [
         'Langsung membeli dengan uang saku hari itu',
         'Menabung sebagian uang sakunya hingga cukup',
         'Meminjam uang ke teman',
-        'Mengabaikan kebutuhan buku'
+        'Mengabaikan kebutuhan buku',
       ],
       'answer': 1,
     },
@@ -47,7 +50,7 @@ class _TipsScreenState extends State<TipsScreen> {
         'Membandingkan harga dan kebutuhan',
         'Langsung beli saja',
         'Meminjam uang',
-        'Membeli yang paling mahal'
+        'Membeli yang paling mahal',
       ],
       'answer': 0,
     },
@@ -58,23 +61,25 @@ class _TipsScreenState extends State<TipsScreen> {
     },
     {
       'type': 'multiple',
-      'question': 'Jika kamu mendapat uang lebih, apa yang sebaiknya dilakukan?',
+      'question':
+          'Jika kamu mendapat uang lebih, apa yang sebaiknya dilakukan?',
       'options': [
         'Menghabiskan semuanya',
         'Menabung sebagian',
         'Membelikan teman jajan',
-        'Menyembunyikan dari orang tua'
+        'Menyembunyikan dari orang tua',
       ],
       'answer': 1,
     },
     {
       'type': 'case',
-      'question': 'Siti ingin membeli sepatu baru, tapi uangnya belum cukup. Apa langkah terbaik?',
+      'question':
+          'Siti ingin membeli sepatu baru, tapi uangnya belum cukup. Apa langkah terbaik?',
       'options': [
         'Meminjam uang ke teman',
         'Menabung hingga cukup',
         'Membeli sepatu bekas',
-        'Mengambil uang orang tua tanpa izin'
+        'Mengambil uang orang tua tanpa izin',
       ],
       'answer': 1,
     },
@@ -90,18 +95,19 @@ class _TipsScreenState extends State<TipsScreen> {
         'Agar tahu ke mana uang pergi',
         'Agar bisa boros',
         'Agar bisa minta uang lebih',
-        'Agar lupa pengeluaran'
+        'Agar lupa pengeluaran',
       ],
       'answer': 0,
     },
     {
       'type': 'case',
-      'question': 'Budi sering membeli jajanan setiap hari hingga uang sakunya habis. Apa saran terbaik?',
+      'question':
+          'Budi sering membeli jajanan setiap hari hingga uang sakunya habis. Apa saran terbaik?',
       'options': [
         'Kurangi jajan dan sisihkan untuk ditabung',
         'Minta uang saku lebih banyak',
         'Pinjam uang ke teman',
-        'Abaikan saja'
+        'Abaikan saja',
       ],
       'answer': 0,
     },
@@ -111,7 +117,8 @@ class _TipsScreenState extends State<TipsScreen> {
   final List<Map<String, String>> _tipsBank = [
     {
       'title': 'Menabung itu Keren!',
-      'message': 'Sisihkan minimal 10% uang sakumu setiap hari untuk masa depan yang lebih baik.',
+      'message':
+          'Sisihkan minimal 10% uang sakumu setiap hari untuk masa depan yang lebih baik.',
       'image': 'assets/images/save_money.png',
     },
     {
@@ -126,7 +133,8 @@ class _TipsScreenState extends State<TipsScreen> {
     },
     {
       'title': 'Catat Pengeluaran',
-      'message': 'Selalu catat setiap pengeluaran agar tahu ke mana uangmu pergi.',
+      'message':
+          'Selalu catat setiap pengeluaran agar tahu ke mana uangmu pergi.',
       'image': 'assets/images/notes.png',
     },
     {
@@ -174,7 +182,7 @@ class _TipsScreenState extends State<TipsScreen> {
   Timer? _tipTimer;
 
   // Daftar berita & video edukasi dari internet
-  final List<Map<String, String>> _eduLinks = [
+  final String _defaultEduLinksJson = jsonEncode([
     {
       'title': '5 tips MENABUNG (no4 sering keskip...)',
       'subtitle': 'YouTube: cclaracl',
@@ -184,22 +192,44 @@ class _TipsScreenState extends State<TipsScreen> {
     {
       'title': 'Tips Menabung untuk Pelajar, Orangtua Harus Tahu!',
       'subtitle': 'hokibank.co.id',
-      'url': 'https://hokibank.co.id/tips-menabung-untuk-pelajar-orangtua-harus-tahu/',
+      'url':
+          'https://hokibank.co.id/tips-menabung-untuk-pelajar-orangtua-harus-tahu/',
       'icon': 'article',
     },
-    {
-      'title': '10 Tips Menabung untuk Pelajar agar Uang Cepat Terkumpul',
-      'subtitle': 'skorlife.com',
-      'url': 'https://skorlife.com/blog/gaya-hidup/tips-menabung-untuk-pelajar/',
-      'icon': 'article',
-    },
-        {
-      'title': 'KESALAHAN KEUANGAN SETIAP USIA',
-      'subtitle': 'YouTube: Tentang Uang',
-      'url': 'https://www.youtube.com/watch?v=Mgy48XVWq5o',
-      'icon': 'video',
-    },
-  ];
+  ]);
+
+  List<Map<String, String>> _eduLinks = [];
+  bool _loadingEduLinks = true;
+
+  Future<void> _fetchEduLinks() async {
+    try {
+      final remoteConfig = FirebaseRemoteConfig.instance;
+      await remoteConfig.setConfigSettings(
+        RemoteConfigSettings(
+          fetchTimeout: const Duration(minutes: 1),
+          minimumFetchInterval: const Duration(minutes: 5),
+        ),
+      );
+      // Set in-app default
+      await remoteConfig.setDefaults({'edu_links': _defaultEduLinksJson});
+      await remoteConfig.fetchAndActivate();
+      final jsonString = remoteConfig.getString('edu_links');
+      final List<dynamic> jsonList = json.decode(jsonString);
+      setState(() {
+        _eduLinks =
+            jsonList.map((e) => Map<String, String>.from(e as Map)).toList();
+        _loadingEduLinks = false;
+      });
+    } catch (e) {
+      // On error, use the in-app default
+      final List<dynamic> jsonList = json.decode(_defaultEduLinksJson);
+      setState(() {
+        _eduLinks =
+            jsonList.map((e) => Map<String, String>.from(e as Map)).toList();
+        _loadingEduLinks = false;
+      });
+    }
+  }
 
   @override
   void initState() {
@@ -207,6 +237,7 @@ class _TipsScreenState extends State<TipsScreen> {
     _randomizeQuizAndTips();
     _pageController = PageController(initialPage: _currentTip);
     _startTipTimer();
+    _fetchEduLinks();
   }
 
   void _randomizeQuizAndTips() {
@@ -287,17 +318,18 @@ class _TipsScreenState extends State<TipsScreen> {
         Container(
           decoration: BoxDecoration(
             gradient: LinearGradient(
-              colors: isDark
-                  ? [
-                      const Color(0xFF23272F),
-                      const Color(0xFF181A20),
-                      const Color(0xFF23272F),
-                    ]
-                  : [
-                      const Color(0xFF1976D2),
-                      const Color(0xFF64B5F6),
-                      const Color(0xFFFFFDE4),
-                    ],
+              colors:
+                  isDark
+                      ? [
+                        const Color(0xFF23272F),
+                        const Color(0xFF181A20),
+                        const Color(0xFF23272F),
+                      ]
+                      : [
+                        const Color(0xFF1976D2),
+                        const Color(0xFF64B5F6),
+                        const Color(0xFFFFFDE4),
+                      ],
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
             ),
@@ -312,7 +344,10 @@ class _TipsScreenState extends State<TipsScreen> {
                 const SizedBox(height: 50),
                 // Tips Harian Carousel
                 Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16.0,
+                    vertical: 8.0,
+                  ),
                   child: SizedBox(
                     height: 120,
                     child: Stack(
@@ -326,25 +361,42 @@ class _TipsScreenState extends State<TipsScreen> {
                             final tip = _dailyTips[idx];
                             return Card(
                               elevation: 5,
-                              color: isDark
-                                  ? Colors.grey[900]?.withOpacity(0.13)
-                                  : Theme.of(context).colorScheme.secondary.withOpacity(0.13),
-                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                              color:
+                                  isDark
+                                      ? Colors.grey[900]?.withOpacity(0.13)
+                                      : Theme.of(
+                                        context,
+                                      ).colorScheme.secondary.withOpacity(0.13),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(16),
+                              ),
                               child: ListTile(
-                                leading: tip['image'] != null
-                                    ? ClipRRect(
-                                        borderRadius: BorderRadius.circular(1),
-                                        child: Image.asset(
-                                          tip['image']!,
-                                          width: 48,
-                                          height: 48,
-                                          fit: BoxFit.cover,
-                                          errorBuilder: (context, error, stackTrace) =>
-                                              const Icon(Icons.lightbulb, size: 48),
-                                        ),
-                                      )
-                                    : const Icon(Icons.lightbulb, size: 48),
-                                title: Text(tip['title']!, style: const TextStyle(fontWeight: FontWeight.bold)),
+                                leading:
+                                    tip['image'] != null
+                                        ? ClipRRect(
+                                          borderRadius: BorderRadius.circular(
+                                            1,
+                                          ),
+                                          child: Image.asset(
+                                            tip['image']!,
+                                            width: 48,
+                                            height: 48,
+                                            fit: BoxFit.cover,
+                                            errorBuilder:
+                                                (context, error, stackTrace) =>
+                                                    const Icon(
+                                                      Icons.lightbulb,
+                                                      size: 48,
+                                                    ),
+                                          ),
+                                        )
+                                        : const Icon(Icons.lightbulb, size: 48),
+                                title: Text(
+                                  tip['title']!,
+                                  style: const TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
                                 subtitle: Text(tip['message']!),
                               ),
                             );
@@ -357,13 +409,18 @@ class _TipsScreenState extends State<TipsScreen> {
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: List.generate(_dailyTips.length, (idx) {
                               return Container(
-                                margin: const EdgeInsets.symmetric(horizontal: 3),
+                                margin: const EdgeInsets.symmetric(
+                                  horizontal: 3,
+                                ),
                                 width: _currentTip == idx ? 14 : 8,
                                 height: 8,
                                 decoration: BoxDecoration(
-                                  color: _currentTip == idx
-                                      ? Theme.of(context).colorScheme.secondary
-                                      : Colors.grey[400],
+                                  color:
+                                      _currentTip == idx
+                                          ? Theme.of(
+                                            context,
+                                          ).colorScheme.secondary
+                                          : Colors.grey[400],
                                   borderRadius: BorderRadius.circular(4),
                                 ),
                               );
@@ -380,23 +437,33 @@ class _TipsScreenState extends State<TipsScreen> {
                   padding: const EdgeInsets.symmetric(horizontal: 16.0),
                   child: Card(
                     elevation: 4,
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(16),
+                    ),
                     color: isDark ? Colors.grey[900] : Colors.white,
                     child: Padding(
                       padding: const EdgeInsets.all(16),
-                      child: _showResult
-                          ? Column(
-                              children: [
-                                Text('Skor Anda: $_score / ${_quizQuestions.length}',
-                                    style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-                                const SizedBox(height: 12),
-                                ElevatedButton(
-                                  onPressed: _resetQuiz,
-                                  child: const Text('Ulangi Kuis (Soal & Tips Baru)'),
-                                ),
-                              ],
-                            )
-                          : _buildQuizQuestion(_quizQuestions[_quizIndex]),
+                      child:
+                          _showResult
+                              ? Column(
+                                children: [
+                                  Text(
+                                    'Skor Anda: $_score / ${_quizQuestions.length}',
+                                    style: const TextStyle(
+                                      fontSize: 18,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 12),
+                                  ElevatedButton(
+                                    onPressed: _resetQuiz,
+                                    child: const Text(
+                                      'Ulangi Kuis (Soal & Tips Baru)',
+                                    ),
+                                  ),
+                                ],
+                              )
+                              : _buildQuizQuestion(_quizQuestions[_quizIndex]),
                     ),
                   ),
                 ),
@@ -406,7 +473,9 @@ class _TipsScreenState extends State<TipsScreen> {
                   padding: const EdgeInsets.symmetric(horizontal: 16.0),
                   child: Card(
                     elevation: 4,
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(16),
+                    ),
                     color: isDark ? Colors.grey[900] : Colors.white,
                     child: Padding(
                       padding: const EdgeInsets.all(12),
@@ -415,31 +484,99 @@ class _TipsScreenState extends State<TipsScreen> {
                         children: [
                           const Text(
                             'Berita & Video Edukasi',
-                            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                            style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 16,
+                            ),
                           ),
                           const SizedBox(height: 10),
-                          ..._eduLinks.map((item) => Card(
-                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                                color: isDark ? Colors.grey[850] : Colors.white,
-                                child: ListTile(
-                                  leading: item['icon'] == 'video'
-                                      ? const Icon(Icons.play_circle_fill, color: Colors.red)
-                                      : const Icon(Icons.article, color: Colors.blue),
-                                  title: Text(item['title'] ?? ''),
-                                  subtitle: Text(item['subtitle'] ?? ''),
-                                  onTap: () async {
-                                    final url = item['url'];
-                                    if (url != null && await canLaunchUrl(Uri.parse(url))) {
-                                      await launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication);
-                                    } else {
-                                      ScaffoldMessenger.of(context).showSnackBar(
-                                        const SnackBar(content: Text('Tidak dapat membuka link')),
-                                      );
-                                    }
-                                  },
-                                  trailing: const Icon(Icons.open_in_new),
-                                ),
-                              )),
+                          _loadingEduLinks
+                              ? const Center(child: CircularProgressIndicator())
+                              : (_eduLinks.isEmpty
+                                  ? const Padding(
+                                    padding: EdgeInsets.all(8.0),
+                                    child: Text(
+                                      'Tidak ada berita atau video edukasi.',
+                                      style: TextStyle(color: Colors.grey),
+                                    ),
+                                  )
+                                  : Column(
+                                    children:
+                                        _eduLinks
+                                            .map(
+                                              (item) => Card(
+                                                shape: RoundedRectangleBorder(
+                                                  borderRadius:
+                                                      BorderRadius.circular(12),
+                                                ),
+                                                color:
+                                                    isDark
+                                                        ? Colors.grey[850]
+                                                        : Colors.white,
+                                                child: ListTile(
+                                                  leading:
+                                                      item['icon'] == 'video'
+                                                          ? const Icon(
+                                                            Icons
+                                                                .play_circle_fill,
+                                                            color: Colors.red,
+                                                          )
+                                                          : const Icon(
+                                                            Icons.article,
+                                                            color: Colors.blue,
+                                                          ),
+                                                  title: Text(
+                                                    item['title'] ?? '',
+                                                  ),
+                                                  subtitle: Text(
+                                                    item['subtitle'] ?? '',
+                                                  ),
+                                                  onTap: () async {
+                                                    String? url = item['url'];
+                                                    if (url != null &&
+                                                        url.isNotEmpty) {
+                                                      // Ensure the URL starts with http/https
+                                                      if (!url.startsWith(
+                                                            'http://',
+                                                          ) &&
+                                                          !url.startsWith(
+                                                            'https://',
+                                                          )) {
+                                                        url = 'https://$url';
+                                                      }
+                                                      final uri = Uri.parse(
+                                                        url,
+                                                      );
+                                                      if (await canLaunchUrl(
+                                                        uri,
+                                                      )) {
+                                                        await launchUrl(
+                                                          uri,
+                                                          mode:
+                                                              LaunchMode
+                                                                  .externalApplication,
+                                                        );
+                                                      } else {
+                                                        ScaffoldMessenger.of(
+                                                          context,
+                                                        ).showSnackBar(
+                                                          const SnackBar(
+                                                            content: Text(
+                                                              'Tidak dapat membuka link',
+                                                            ),
+                                                          ),
+                                                        );
+                                                      }
+                                                    }
+                                                  },
+                                                  trailing: const Icon(
+                                                    Icons.open_in_new,
+                                                  ),
+                                                ),
+                                              ),
+                                            )
+                                            .toList(),
+                                  )),
                         ],
                       ),
                     ),
@@ -459,7 +596,10 @@ class _TipsScreenState extends State<TipsScreen> {
       return Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(q['question'], style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+          Text(
+            q['question'],
+            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+          ),
           const SizedBox(height: 16),
           ...List.generate(q['options'].length, (i) {
             return Padding(
@@ -476,7 +616,10 @@ class _TipsScreenState extends State<TipsScreen> {
       return Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(q['question'], style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+          Text(
+            q['question'],
+            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+          ),
           const SizedBox(height: 16),
           Row(
             children: [
