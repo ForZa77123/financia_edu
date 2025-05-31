@@ -2,10 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:hive/hive.dart';
 import 'dart:io';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 class SettingsScreen extends StatefulWidget {
   final String email; // email digunakan untuk login dan key di Hive
-  final String name; // gunakan nama dari register (Your Name), tidak bisa diubah
+  final String
+  name; // gunakan nama dari register (Your Name), tidak bisa diubah
   final VoidCallback? onLogout;
   final Future<void> Function()? onSetBudget;
   final DateTime? selectedDate;
@@ -52,10 +54,17 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
   Future<void> _fetchFirestoreName() async {
     try {
-      final doc = await FirebaseFirestore.instance.collection('users').where('email', isEqualTo: widget.email).limit(1).get();
+      final doc =
+          await FirebaseFirestore.instance
+              .collection('users')
+              .where('email', isEqualTo: widget.email)
+              .limit(1)
+              .get();
       if (doc.docs.isNotEmpty) {
         final firestoreName = doc.docs.first.data()['name'];
-        if (firestoreName != null && firestoreName is String && firestoreName.isNotEmpty) {
+        if (firestoreName != null &&
+            firestoreName is String &&
+            firestoreName.isNotEmpty) {
           setState(() {
             // Update displayName jika berbeda
             _firestoreName = firestoreName;
@@ -155,7 +164,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     // Validasi
                     if (oldPassword.isEmpty || newPassword.isEmpty) {
                       setDialogState(() {
-                        errorMsg = "Isi password lama dan password baru untuk mengubah password";
+                        errorMsg =
+                            "Isi password lama dan password baru untuk mengubah password";
                       });
                       return;
                     }
@@ -311,10 +321,25 @@ class _SettingsScreenState extends State<SettingsScreen> {
     final colorScheme = Theme.of(context).colorScheme;
     final usersBox = Hive.box('users');
     final userData = usersBox.get(widget.email);
-    String displayName = _firestoreName ?? widget.name;
-    if (_firestoreName == null && userData is Map && userData['name'] != null && userData['name'] != displayName) {
+    final user = FirebaseAuth.instance.currentUser;
+    String displayName;
+
+    // If Google login and displayName exists, use it
+    if (user != null &&
+        user.providerData.any((p) => p.providerId == 'google.com') &&
+        user.displayName != null &&
+        user.displayName!.isNotEmpty) {
+      displayName = user.displayName!;
+    } else if (_firestoreName != null && _firestoreName!.isNotEmpty) {
+      displayName = _firestoreName!;
+    } else if (userData is Map &&
+        userData['name'] != null &&
+        userData['name'].toString().isNotEmpty) {
       displayName = userData['name'];
+    } else {
+      displayName = widget.name;
     }
+
     return Scaffold(
       body: SafeArea(
         child: SingleChildScrollView(
@@ -335,17 +360,37 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       radius: 32,
                       backgroundColor: colorScheme.primary,
                       backgroundImage:
-                          profileImagePath != null
-                              ? FileImage(File(profileImagePath!))
-                              : null,
+                          (() {
+                                final user = FirebaseAuth.instance.currentUser;
+                                // If Google login and photoURL exists, use it
+                                if (user != null &&
+                                    user.photoURL != null &&
+                                    user.photoURL!.isNotEmpty) {
+                                  return NetworkImage(user.photoURL!);
+                                }
+                                // If local profile image exists (from Hive), use it
+                                if (profileImagePath != null) {
+                                  return FileImage(File(profileImagePath!));
+                                }
+                                // Otherwise, use null (default icon will show)
+                                return null;
+                              })()
+                              as ImageProvider<Object>?,
                       child:
-                          profileImagePath == null
-                              ? const Icon(
-                                  Icons.person,
-                                  size: 40,
-                                  color: Colors.white,
-                                )
-                              : null,
+                          (() {
+                            final user = FirebaseAuth.instance.currentUser;
+                            if ((user != null &&
+                                    user.photoURL != null &&
+                                    user.photoURL!.isNotEmpty) ||
+                                profileImagePath != null) {
+                              return null; // Don't show icon if image exists
+                            }
+                            return const Icon(
+                              Icons.person,
+                              size: 40,
+                              color: Colors.white,
+                            );
+                          })(),
                     ),
                     const SizedBox(width: 16),
                     Expanded(
@@ -395,7 +440,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     ),
                   ),
                   ListTile(
-                    leading: Icon(Icons.lock_outline, color: colorScheme.primary),
+                    leading: Icon(
+                      Icons.lock_outline,
+                      color: colorScheme.primary,
+                    ),
                     title: const Text('Change Password'),
                     trailing: Icon(
                       Icons.chevron_right,
