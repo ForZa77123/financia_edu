@@ -3,6 +3,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:device_info_plus/device_info_plus.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:google_sign_in/google_sign_in.dart';
 
 class AuthScreen extends StatefulWidget {
   final void Function(String username) onLogin;
@@ -25,6 +26,7 @@ class _AuthScreenState extends State<AuthScreen> {
   bool isLogin = true;
   String? error;
   bool isReset = false; // Tambahkan state untuk reset password
+  bool isLoadingGoogle = false;
 
   Future<void> setDeviceVerified(
     String uid,
@@ -183,6 +185,40 @@ class _AuthScreenState extends State<AuthScreen> {
     });
   }
 
+  Future<void> _signInWithGoogle() async {
+    setState(() { isLoadingGoogle = true; error = null; });
+    try {
+      final GoogleSignInAccount? googleUser = await GoogleSignIn().signIn();
+      if (googleUser == null) {
+        setState(() { isLoadingGoogle = false; });
+        return; // User cancelled
+      }
+      final GoogleSignInAuthentication googleAuth = await googleUser.authentication;
+      final credential = GoogleAuthProvider.credential(
+        accessToken: googleAuth.accessToken,
+        idToken: googleAuth.idToken,
+      );
+      final userCredential = await FirebaseAuth.instance.signInWithCredential(credential);
+      final user = userCredential.user;
+      if (user != null) {
+        // Simpan/update data user ke Firestore
+        await FirebaseFirestore.instance.collection('users').doc(user.uid).set({
+          'email': user.email,
+          'name': user.displayName ?? '',
+          'photoURL': user.photoURL ?? '',
+          'provider': 'google',
+        }, SetOptions(merge: true));
+        widget.onLogin(user.email!);
+      } else {
+        setState(() { error = 'Gagal login dengan Google.'; });
+      }
+    } catch (e) {
+      setState(() { error = 'Gagal login dengan Google.'; });
+    } finally {
+      setState(() { isLoadingGoogle = false; });
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -230,6 +266,31 @@ class _AuthScreenState extends State<AuthScreen> {
                 ),
               ),
               const SizedBox(height: 8),
+              if (!isReset)
+                Column(
+                  children: [
+                    const SizedBox(height: 8),
+                    isLoadingGoogle
+                        ? const CircularProgressIndicator()
+                        : SizedBox(
+                            width: double.infinity,
+                            child: ElevatedButton.icon(
+                              icon: Image.asset(
+                                'assets/google_logo.png',
+                                height: 24,
+                              ),
+                              label: const Text('Login dengan Google'),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: Colors.white,
+                                foregroundColor: Colors.black87,
+                                side: const BorderSide(color: Colors.grey),
+                                textStyle: const TextStyle(fontWeight: FontWeight.bold),
+                              ),
+                              onPressed: _signInWithGoogle,
+                            ),
+                          ),
+                  ],
+                ),
               if (!isReset)
                 TextButton(
                   onPressed: () {
