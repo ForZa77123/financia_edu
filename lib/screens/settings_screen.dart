@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:hive/hive.dart';
 import 'dart:io';
+import 'package:image_picker/image_picker.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 class SettingsScreen extends StatefulWidget {
@@ -188,14 +190,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
   }
 
   Future<void> _resetFinancialData() async {
-    final usersBox = Hive.box('users');
-    final userData = usersBox.get(widget.email);
-    String? correctPassword;
-    if (userData is Map && userData['password'] != null) {
-      correctPassword = userData['password'];
-    } else if (userData is String) {
-      correctPassword = userData;
-    }
     final TextEditingController passController = TextEditingController();
     bool isLoading = false;
     String? errorMsg;
@@ -250,39 +244,72 @@ class _SettingsScreenState extends State<SettingsScreen> {
                               });
                               return;
                             }
-                            if (correctPassword == null ||
-                                inputPass != correctPassword) {
+                            try {
+                              // Reauthenticate user
+                              final user = FirebaseAuth.instance.currentUser;
+                              if (user == null) {
+                                setDialogState(() {
+                                  errorMsg = "User tidak ditemukan";
+                                  isLoading = false;
+                                });
+                                return;
+                              }
+                              final cred = EmailAuthProvider.credential(
+                                email: user.email!,
+                                password: inputPass,
+                              );
+                              await user.reauthenticateWithCredential(cred);
+
+                              final firestore = FirebaseFirestore.instance;
+                              final uid = user.uid;
+
+                              // Delete all docs in users/[uid]/records
+                              final recordsSnap =
+                                  await firestore
+                                      .collection('users')
+                                      .doc(uid)
+                                      .collection('records')
+                                      .get();
+                              for (final doc in recordsSnap.docs) {
+                                await doc.reference.delete();
+                              }
+
+                              // Delete all docs in users/[uid]/budgets
+                              final budgetsSnap =
+                                  await firestore
+                                      .collection('users')
+                                      .doc(uid)
+                                      .collection('budgets')
+                                      .get();
+                              for (final doc in budgetsSnap.docs) {
+                                await doc.reference.delete();
+                              }
+
+                              setDialogState(() => isLoading = false);
+                              Navigator.pop(context);
+                              if (mounted) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(
+                                    content: Text(
+                                      'Data keuangan berhasil direset.',
+                                    ),
+                                    backgroundColor: Colors.red,
+                                  ),
+                                );
+                              }
+                            } on FirebaseAuthException catch (e) {
                               setDialogState(() {
-                                errorMsg = "Password salah";
+                                errorMsg =
+                                    e.code == 'wrong-password'
+                                        ? "Password salah"
+                                        : "Gagal autentikasi: ${e.message}";
                                 isLoading = false;
                               });
-                              return;
-                            }
-                            // Hapus data keuangan
-                            final recordsBox = Hive.box('records');
-                            final budgetsBox = Hive.box('budgets');
-                            await recordsBox.delete(widget.email);
-                            final keysToDelete =
-                                budgetsBox.keys
-                                    .where(
-                                      (k) =>
-                                          k.toString().startsWith(widget.email),
-                                    )
-                                    .toList();
-                            for (final k in keysToDelete) {
-                              await budgetsBox.delete(k);
-                            }
-                            setDialogState(() => isLoading = false);
-                            Navigator.pop(context);
-                            if (mounted) {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(
-                                  content: Text(
-                                    'Data keuangan berhasil direset.',
-                                  ),
-                                  backgroundColor: Colors.red,
-                                ),
-                              );
+                            } catch (e) {
+                              setDialogState(() {
+                                errorMsg = "Terjadi kesalahan: $e";
+                                isLoading = false;
+                              });
                             }
                           },
                   style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
