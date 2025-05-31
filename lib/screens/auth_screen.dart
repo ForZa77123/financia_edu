@@ -207,15 +207,6 @@ class _AuthScreenState extends State<AuthScreen> {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              // App Logo
-              Padding(
-                padding: const EdgeInsets.only(bottom: 24.0),
-                child: Image.asset(
-                  'assets/logo.png',
-                  height: 72,
-                  fit: BoxFit.contain,
-                ),
-              ),
               Text(
                 isLogin ? "Login" : isReset ? "Reset Password" : "Register",
                 style: const TextStyle(fontSize: 24),
