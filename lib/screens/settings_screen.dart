@@ -95,20 +95,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
   }
 
   Future<void> _editProfile() async {
-    final usersBox = Hive.box('users');
-    final prefsBox = Hive.isBoxOpen('prefs') ? Hive.box('prefs') : null;
-    final userDataRaw = usersBox.get(widget.email);
-    Map userData;
-    if (userDataRaw is Map) {
-      userData = userDataRaw;
-    } else if (userDataRaw is String) {
-      userData = {'password': userDataRaw};
-    } else {
-      userData = {};
-    }
     final TextEditingController oldPasswordController = TextEditingController();
     final TextEditingController newPasswordController = TextEditingController();
     String? errorMsg;
+    bool isLoading = false;
 
     await showDialog(
       context: context,
@@ -157,49 +147,83 @@ class _SettingsScreenState extends State<SettingsScreen> {
               ),
               actions: [
                 TextButton(
-                  onPressed: () => Navigator.pop(context),
+                  onPressed: isLoading ? null : () => Navigator.pop(context),
                   child: const Text('Batal'),
                 ),
                 ElevatedButton(
-                  onPressed: () async {
-                    final oldPassword = oldPasswordController.text.trim();
-                    final newPassword = newPasswordController.text.trim();
-                    if (oldPassword.isEmpty || newPassword.isEmpty) {
-                      setDialogState(() {
-                        errorMsg = 'Semua field wajib diisi';
-                      });
-                      return;
-                    }
-                    // Validasi password lama
-                    if (userData['password'] != oldPassword) {
-                      setDialogState(() {
-                        errorMsg = 'Password lama salah';
-                      });
-                      return;
-                    }
-                    // Update password di Hive
-                    final newUserData = {
-                      ...userData,
-                      'password': newPassword,
-                    };
-                    await usersBox.put(widget.email, newUserData);
-                    if (prefsBox != null) {
-                      await prefsBox.put('password', newPassword);
-                    }
-                    // Sinkronkan password ke Firestore
-                    try {
-                      final user = FirebaseAuth.instance.currentUser;
-                      if (user != null) {
-                        await FirebaseFirestore.instance.collection('users').doc(user.uid).update({
-                          'password': newPassword,
-                        });
-                      }
-                    } catch (e) {
-                      // Optional: handle error
-                    }
-                    Navigator.pop(context);
-                  },
-                  child: const Text('Simpan'),
+                  onPressed:
+                      isLoading
+                          ? null
+                          : () async {
+                            final oldPassword =
+                                oldPasswordController.text.trim();
+                            final newPassword =
+                                newPasswordController.text.trim();
+                            if (oldPassword.isEmpty || newPassword.isEmpty) {
+                              setDialogState(() {
+                                errorMsg = 'Semua field wajib diisi';
+                              });
+                              return;
+                            }
+                            setDialogState(() {
+                              isLoading = true;
+                              errorMsg = null;
+                            });
+                            try {
+                              final user = FirebaseAuth.instance.currentUser;
+                              if (user == null || user.email == null) {
+                                setDialogState(() {
+                                  errorMsg = 'User tidak ditemukan.';
+                                  isLoading = false;
+                                });
+                                return;
+                              }
+                              // Re-authenticate
+                              final cred = EmailAuthProvider.credential(
+                                email: user.email!,
+                                password: oldPassword,
+                              );
+                              await user.reauthenticateWithCredential(cred);
+                              // Update password
+                              await user.updatePassword(newPassword);
+                              Navigator.pop(context);
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                  content: Text('Password berhasil diubah.'),
+                                  backgroundColor: Colors.green,
+                                ),
+                              );
+                            } on FirebaseAuthException catch (e) {
+                              String msg = 'Terjadi kesalahan.';
+                              if (e.code == 'wrong-password') {
+                                msg = 'Password lama salah.';
+                              } else if (e.code == 'weak-password') {
+                                msg = 'Password baru terlalu lemah.';
+                              } else if (e.code == 'requires-recent-login') {
+                                msg = 'Silakan login ulang dan coba lagi.';
+                              }
+                              setDialogState(() {
+                                errorMsg = msg;
+                                isLoading = false;
+                              });
+                            } catch (e) {
+                              setDialogState(() {
+                                errorMsg = 'Terjadi kesalahan.';
+                                isLoading = false;
+                              });
+                            }
+                          },
+                  child:
+                      isLoading
+                          ? const SizedBox(
+                            width: 18,
+                            height: 18,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              color: Colors.white,
+                            ),
+                          )
+                          : const Text('Simpan'),
                 ),
               ],
             );
@@ -235,70 +259,76 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   child: const Text('Batal'),
                 ),
                 ElevatedButton(
-                  onPressed: isLoading
-                      ? null
-                      : () async {
-                          setDialogState(() => isLoading = true);
-                          // Hapus data keuangan lokal
-                          final recordsBox = Hive.box('records');
-                          final budgetsBox = Hive.box('budgets');
-                          await recordsBox.delete(widget.email);
-                          final keysToDelete = budgetsBox.keys
-                              .where((k) => k.toString().startsWith(widget.email))
-                              .toList();
-                          for (final k in keysToDelete) {
-                            await budgetsBox.delete(k);
-                          }
-                          // Hapus data keuangan di Firestore (cloud)
-                          try {
-                            final user = FirebaseAuth.instance.currentUser;
-                            if (user != null) {
-                              final recordsRef = FirebaseFirestore.instance
-                                  .collection('users')
-                                  .doc(user.uid)
-                                  .collection('records');
-                              final budgetsRef = FirebaseFirestore.instance
-                                  .collection('users')
-                                  .doc(user.uid)
-                                  .collection('budgets');
-                              // Hapus semua records
-                              final recordsSnap = await recordsRef.get();
-                              for (final doc in recordsSnap.docs) {
-                                await doc.reference.delete();
-                              }
-                              // Hapus semua budgets
-                              final budgetsSnap = await budgetsRef.get();
-                              for (final doc in budgetsSnap.docs) {
-                                await doc.reference.delete();
-                              }
+                  onPressed:
+                      isLoading
+                          ? null
+                          : () async {
+                            setDialogState(() => isLoading = true);
+                            // Hapus data keuangan lokal
+                            final recordsBox = Hive.box('records');
+                            final budgetsBox = Hive.box('budgets');
+                            await recordsBox.delete(widget.email);
+                            final keysToDelete =
+                                budgetsBox.keys
+                                    .where(
+                                      (k) =>
+                                          k.toString().startsWith(widget.email),
+                                    )
+                                    .toList();
+                            for (final k in keysToDelete) {
+                              await budgetsBox.delete(k);
                             }
-                          } catch (e) {
-                            // Optional: handle error
-                          }
-                          setDialogState(() => isLoading = false);
-                          Navigator.pop(context);
-                          if (mounted) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(
-                                content: Text(
-                                  'Data keuangan berhasil direset dari perangkat dan cloud.',
+                            // Hapus data keuangan di Firestore (cloud)
+                            try {
+                              final user = FirebaseAuth.instance.currentUser;
+                              if (user != null) {
+                                final recordsRef = FirebaseFirestore.instance
+                                    .collection('users')
+                                    .doc(user.uid)
+                                    .collection('records');
+                                final budgetsRef = FirebaseFirestore.instance
+                                    .collection('users')
+                                    .doc(user.uid)
+                                    .collection('budgets');
+                                // Hapus semua records
+                                final recordsSnap = await recordsRef.get();
+                                for (final doc in recordsSnap.docs) {
+                                  await doc.reference.delete();
+                                }
+                                // Hapus semua budgets
+                                final budgetsSnap = await budgetsRef.get();
+                                for (final doc in budgetsSnap.docs) {
+                                  await doc.reference.delete();
+                                }
+                              }
+                            } catch (e) {
+                              // Optional: handle error
+                            }
+                            setDialogState(() => isLoading = false);
+                            Navigator.pop(context);
+                            if (mounted) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                  content: Text(
+                                    'Data keuangan berhasil direset dari perangkat dan cloud.',
+                                  ),
+                                  backgroundColor: Colors.red,
                                 ),
-                                backgroundColor: Colors.red,
-                              ),
-                            );
-                          }
-                        },
+                              );
+                            }
+                          },
                   style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
-                  child: isLoading
-                      ? const SizedBox(
-                          width: 18,
-                          height: 18,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2,
-                            color: Colors.white,
-                          ),
-                        )
-                      : const Text('Reset Data'),
+                  child:
+                      isLoading
+                          ? const SizedBox(
+                            width: 18,
+                            height: 18,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              color: Colors.white,
+                            ),
+                          )
+                          : const Text('Reset Data'),
                 ),
               ],
             );
@@ -312,11 +342,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   Widget build(BuildContext context) {
     final colorScheme = Theme.of(context).colorScheme;
     if (_loading) {
-      return const Scaffold(
-        body: Center(
-          child: CircularProgressIndicator(),
-        ),
-      );
+      return const Scaffold(body: Center(child: CircularProgressIndicator()));
     }
     final usersBox = Hive.box('users');
     final userData = usersBox.get(widget.email);
